@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { useQuery } from "@tanstack/react-query";
 import { getLeaderboard as fetchLeaderboard } from "@/lib/api";
@@ -7,6 +8,7 @@ import { cn } from "@/lib/utils";
 
 export default function Leaderboard() {
   const { user: currentUser } = useStore();
+  const [revealedCodes, setRevealedCodes] = useState<Set<string | number>>(new Set());
   const { data: users = [] } = useQuery({
     queryKey: ["leaderboard"],
     queryFn: fetchLeaderboard,
@@ -15,6 +17,21 @@ export default function Leaderboard() {
   
   // Only owner and admin can see user codes
   const canSeeCodes = currentUser?.role === 'owner' || currentUser?.role === 'admin';
+  
+  const toggleCodeVisibility = (userId: string | number, code: string) => {
+    if (revealedCodes.has(userId)) {
+      navigator.clipboard.writeText(code);
+    }
+    setRevealedCodes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(userId)) {
+        newSet.delete(userId);
+      } else {
+        newSet.add(userId);
+      }
+      return newSet;
+    });
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-4 md:space-y-8">
@@ -58,10 +75,21 @@ export default function Leaderboard() {
                 )}>
                   {user.name}
                 </div>
-                <div className="text-[10px] md:text-xs font-mono text-muted-foreground">
-                  LVL {user.level}
+                <div className="text-[10px] md:text-xs font-mono text-muted-foreground flex items-center gap-1">
+                  <span>LVL {user.level}</span>
                   {canSeeCodes && (
-                    <span className="mr-2 opacity-60">• {user.code}</span>
+                    <span 
+                      className={`mr-2 cursor-pointer select-none transition-all duration-200 ${
+                        revealedCodes.has(user.id) ? 'text-primary' : 'blur-[4px]'
+                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleCodeVisibility(user.id, user.code);
+                      }}
+                      title={revealedCodes.has(user.id) ? 'اضغط للنسخ والإخفاء' : 'اضغط لإظهار الكود'}
+                    >
+                      • {user.code}
+                    </span>
                   )}
                 </div>
               </div>
