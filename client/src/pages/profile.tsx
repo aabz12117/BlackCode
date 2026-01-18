@@ -70,7 +70,7 @@ export default function Profile() {
                 <span>التقدم للمستوى {user.level + 1}</span>
                 <span className="font-mono text-muted-foreground">{Math.floor(progress)}%</span>
               </div>
-              <Progress value={progress} className="h-2 bg-white/5" indicatorClassName="bg-primary" />
+              <Progress value={progress} className="h-2 bg-white/5" />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
