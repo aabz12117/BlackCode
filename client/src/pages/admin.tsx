@@ -24,6 +24,7 @@ export default function Admin() {
   const [newCodeName, setNewCodeName] = useState("");
   const [newUserRole, setNewUserRole] = useState<"user" | "admin">("user");
   const [createUserCooldown, setCreateUserCooldown] = useState(0);
+  const [revealedCodes, setRevealedCodes] = useState<Set<string>>(new Set());
   const [isNewMissionOpen, setIsNewMissionOpen] = useState(false);
   const [isEditMissionOpen, setIsEditMissionOpen] = useState(false);
   const [editingMissionId, setEditingMissionId] = useState<string | null>(null);
@@ -199,6 +200,19 @@ export default function Admin() {
     if (isOwner) return true; // Owner can ban everyone
     if (isAdmin && targetRole === 'user') return true; // Admin can only ban users
     return false;
+  };
+
+  // Toggle code visibility
+  const toggleCodeVisibility = (userId: string) => {
+    setRevealedCodes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(userId)) {
+        newSet.delete(userId);
+      } else {
+        newSet.add(userId);
+      }
+      return newSet;
+    });
   };
 
   const handleCreateMission = async () => {
@@ -749,7 +763,16 @@ export default function Admin() {
                             <span className="text-[10px] px-1.5 py-0.5 bg-red-500/20 text-red-500 rounded">محظور</span>
                           )}
                         </div>
-                        <span className="text-[10px] md:text-xs font-mono text-muted-foreground">{u.code}</span>
+                        <span 
+                          className={`text-[10px] md:text-xs font-mono text-muted-foreground cursor-pointer select-none transition-all ${
+                            revealedCodes.has(u.id) ? '' : 'blur-sm hover:blur-none'
+                          }`}
+                          onClick={() => toggleCodeVisibility(u.id)}
+                          title={revealedCodes.has(u.id) ? 'اضغط للإخفاء' : 'اضغط لإظهار الكود'}
+                          data-testid={`code-display-${u.id}`}
+                        >
+                          {u.code}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2 md:gap-4">
                         <div className="text-right">
