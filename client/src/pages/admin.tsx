@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useStore } from "@/lib/store";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -23,6 +23,7 @@ export default function Admin() {
   
   const [newCodeName, setNewCodeName] = useState("");
   const [newUserRole, setNewUserRole] = useState<"user" | "admin">("user");
+  const [createUserCooldown, setCreateUserCooldown] = useState(0);
   const [isNewMissionOpen, setIsNewMissionOpen] = useState(false);
   const [isEditMissionOpen, setIsEditMissionOpen] = useState(false);
   const [editingMissionId, setEditingMissionId] = useState<string | null>(null);
@@ -140,7 +141,27 @@ export default function Admin() {
     },
   });
 
+  // Cooldown timer for user creation (prevents spam)
+  useEffect(() => {
+    if (createUserCooldown > 0) {
+      const timer = setInterval(() => {
+        setCreateUserCooldown(prev => prev - 1);
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [createUserCooldown]);
+
   const handleGenerateCode = async () => {
+    // Check if name is provided
+    if (!newCodeName.trim()) {
+      toast({
+        variant: "destructive",
+        title: "اسم المستخدم مطلوب",
+        description: "يرجى إدخال اسم المستخدم قبل إنشاء الكود.",
+      });
+      return;
+    }
+    
     const randomCode = Math.random().toString(36).substring(2, 12).toUpperCase();
     
     // Admin can only create users, owner can create both
@@ -150,7 +171,7 @@ export default function Admin() {
     try {
       await createUserMutation.mutateAsync({
         code: randomCode,
-        name: newCodeName || "مجهول",
+        name: newCodeName.trim(),
         points: 0,
         level: 1,
         role: roleToCreate,
@@ -159,10 +180,11 @@ export default function Admin() {
       
       toast({
         title: "تم توليد الكود بنجاح",
-        description: `الكود الجديد: ${randomCode} (${roleLabel}) للعميل ${newCodeName || "مجهول"}`,
+        description: `الكود الجديد: ${randomCode} (${roleLabel}) للعميل ${newCodeName.trim()}`,
       });
       setNewCodeName("");
       setNewUserRole("user");
+      setCreateUserCooldown(10); // 10 seconds cooldown
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -329,12 +351,13 @@ export default function Admin() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>اسم المستخدم (اختياري)</Label>
+                  <Label>اسم المستخدم <span className="text-destructive">*</span></Label>
                   <Input 
                     value={newCodeName} 
                     onChange={(e) => setNewCodeName(e.target.value)}
                     placeholder="اسم العميل..." 
                     className="bg-black/20"
+                    required
                     data-testid="input-new-user-name"
                   />
                 </div>
@@ -352,8 +375,13 @@ export default function Admin() {
                     </Select>
                   </div>
                 )}
-                <Button onClick={handleGenerateCode} className="w-full bg-primary text-black font-bold hover:bg-primary/90" data-testid="button-generate-code">
-                  توليد كود عشوائي
+                <Button 
+                  onClick={handleGenerateCode} 
+                  className="w-full bg-primary text-black font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed" 
+                  disabled={createUserCooldown > 0 || !newCodeName.trim()}
+                  data-testid="button-generate-code"
+                >
+                  {createUserCooldown > 0 ? `انتظر ${createUserCooldown} ثانية` : 'توليد كود عشوائي'}
                 </Button>
               </CardContent>
             </Card>
