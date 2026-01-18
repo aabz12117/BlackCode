@@ -89,6 +89,37 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-display tracking-wide uppercase;
   }
+  
+  /* Custom Scrollbar Styling */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: hsl(220 25% 8%);
+    border-radius: 3px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: hsl(150 100% 50% / 0.3);
+    border-radius: 3px;
+    transition: background 0.2s;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(150 100% 50% / 0.6);
+  }
+  
+  ::-webkit-scrollbar-corner {
+    background: hsl(220 25% 8%);
+  }
+  
+  /* Firefox scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(150 100% 50% / 0.3) hsl(220 25% 8%);
+  }
 }
 
 @layer utilities {
