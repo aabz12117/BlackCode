@@ -9,7 +9,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   points: integer("points").notNull().default(0),
   level: integer("level").notNull().default(1),
-  role: text("role").notNull().default("user"), // 'user' | 'admin'
+  role: text("role").notNull().default("user"), // 'user' | 'admin' | 'owner'
   status: text("status").notNull().default("active"), // 'active' | 'banned'
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

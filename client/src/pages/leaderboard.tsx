@@ -12,6 +12,9 @@ export default function Leaderboard() {
     queryFn: fetchLeaderboard,
     refetchInterval: 15000,
   });
+  
+  // Only owner and admin can see user codes
+  const canSeeCodes = currentUser?.role === 'owner' || currentUser?.role === 'admin';
 
   return (
     <div className="max-w-4xl mx-auto space-y-4 md:space-y-8">
@@ -57,6 +60,9 @@ export default function Leaderboard() {
                 </div>
                 <div className="text-[10px] md:text-xs font-mono text-muted-foreground">
                   LVL {user.level}
+                  {canSeeCodes && (
+                    <span className="mr-2 opacity-60">• {user.code}</span>
+                  )}
                 </div>
               </div>
               

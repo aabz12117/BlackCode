@@ -22,6 +22,7 @@ export default function Admin() {
   const queryClient = useQueryClient();
   
   const [newCodeName, setNewCodeName] = useState("");
+  const [newUserRole, setNewUserRole] = useState<"user" | "admin">("user");
   const [isNewMissionOpen, setIsNewMissionOpen] = useState(false);
   const [isEditMissionOpen, setIsEditMissionOpen] = useState(false);
   const [editingMissionId, setEditingMissionId] = useState<string | null>(null);
@@ -56,7 +57,11 @@ export default function Admin() {
     queryFn: () => getMissions(),
   });
 
-  if (user?.role !== 'admin') {
+  const isOwner = user?.role === 'owner';
+  const isAdmin = user?.role === 'admin';
+  const hasAdminAccess = isOwner || isAdmin;
+  
+  if (!hasAdminAccess) {
     setLocation("/missions");
     return null;
   }
@@ -105,14 +110,14 @@ export default function Admin() {
   });
 
   const createUserMutation = useMutation({
-    mutationFn: createUser,
+    mutationFn: (data: Parameters<typeof createUser>[0]) => createUser(data, user?.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
     },
   });
 
   const banUserMutation = useMutation({
-    mutationFn: apiBanUser,
+    mutationFn: (targetId: string) => apiBanUser(targetId, user?.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       toast({
@@ -124,7 +129,7 @@ export default function Admin() {
   });
 
   const unbanUserMutation = useMutation({
-    mutationFn: apiUnbanUser,
+    mutationFn: (targetId: string) => apiUnbanUser(targetId, user?.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       toast({
@@ -138,21 +143,26 @@ export default function Admin() {
   const handleGenerateCode = async () => {
     const randomCode = Math.random().toString(36).substring(2, 12).toUpperCase();
     
+    // Admin can only create users, owner can create both
+    const roleToCreate = isOwner ? newUserRole : "user";
+    const roleLabel = roleToCreate === 'admin' ? 'مشرف' : 'مستخدم';
+    
     try {
       await createUserMutation.mutateAsync({
         code: randomCode,
         name: newCodeName || "مجهول",
         points: 0,
         level: 1,
-        role: "user",
+        role: roleToCreate,
         status: "active",
       });
       
       toast({
         title: "تم توليد الكود بنجاح",
-        description: `الكود الجديد: ${randomCode} للعميل ${newCodeName || "مجهول"}`,
+        description: `الكود الجديد: ${randomCode} (${roleLabel}) للعميل ${newCodeName || "مجهول"}`,
       });
       setNewCodeName("");
+      setNewUserRole("user");
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -160,6 +170,13 @@ export default function Admin() {
         description: error.message,
       });
     }
+  };
+  
+  // Helper to check if current user can ban target user
+  const canBanUser = (targetRole: string) => {
+    if (isOwner) return true; // Owner can ban everyone
+    if (isAdmin && targetRole === 'user') return true; // Admin can only ban users
+    return false;
   };
 
   const handleCreateMission = async () => {
@@ -282,10 +299,14 @@ export default function Admin() {
           <h2 className="text-2xl md:text-3xl font-display font-bold text-destructive">لوحة التحكم</h2>
           <p className="text-muted-foreground font-mono text-xs md:text-sm">منطقة محظورة - للمشرفين فقط</p>
         </div>
-        <div className="px-3 py-1.5 md:px-4 md:py-2 bg-destructive/10 text-destructive border border-destructive/20 rounded font-mono text-xs md:text-sm flex items-center gap-2 w-fit">
+        <div className={`px-3 py-1.5 md:px-4 md:py-2 border rounded font-mono text-xs md:text-sm flex items-center gap-2 w-fit ${
+          isOwner 
+            ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' 
+            : 'bg-destructive/10 text-destructive border-destructive/20'
+        }`}>
           <ShieldAlert className="w-3 h-3 md:w-4 md:h-4" />
-          <span className="hidden sm:inline">ADMIN ACCESS GRANTED</span>
-          <span className="sm:hidden">ADMIN</span>
+          <span className="hidden sm:inline">{isOwner ? 'OWNER ACCESS GRANTED' : 'ADMIN ACCESS GRANTED'}</span>
+          <span className="sm:hidden">{isOwner ? 'OWNER' : 'ADMIN'}</span>
         </div>
       </div>
 
@@ -317,6 +338,20 @@ export default function Admin() {
                     data-testid="input-new-user-name"
                   />
                 </div>
+                {isOwner && (
+                  <div className="space-y-2">
+                    <Label>نوع الحساب</Label>
+                    <Select value={newUserRole} onValueChange={(val: "user" | "admin") => setNewUserRole(val)}>
+                      <SelectTrigger className="bg-black/20" data-testid="select-new-user-role">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="user">مستخدم عادي</SelectItem>
+                        <SelectItem value="admin">مشرف</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <Button onClick={handleGenerateCode} className="w-full bg-primary text-black font-bold hover:bg-primary/90" data-testid="button-generate-code">
                   توليد كود عشوائي
                 </Button>
@@ -667,48 +702,61 @@ export default function Admin() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {users.filter(u => u.id !== user?.id).map(u => (
-                  <div key={u.id} className="flex items-center justify-between p-3 bg-white/5 rounded border border-white/5">
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm md:text-base">{u.name}</span>
-                        {u.status === 'banned' && (
-                          <span className="text-[10px] px-1.5 py-0.5 bg-red-500/20 text-red-500 rounded">محظور</span>
+                {users.filter(u => u.id !== user?.id).map(u => {
+                  const getRoleBadge = (role: string) => {
+                    if (role === 'owner') return { label: 'مالك', className: 'bg-purple-500/20 text-purple-400' };
+                    if (role === 'admin') return { label: 'مشرف', className: 'bg-blue-500/20 text-blue-400' };
+                    return { label: 'مستخدم', className: 'bg-white/10 text-muted-foreground' };
+                  };
+                  const roleBadge = getRoleBadge(u.role);
+                  const showBanButtons = canBanUser(u.role);
+                  
+                  return (
+                    <div key={u.id} className="flex items-center justify-between p-3 bg-white/5 rounded border border-white/5">
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-sm md:text-base">{u.name}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${roleBadge.className}`}>{roleBadge.label}</span>
+                          {u.status === 'banned' && (
+                            <span className="text-[10px] px-1.5 py-0.5 bg-red-500/20 text-red-500 rounded">محظور</span>
+                          )}
+                        </div>
+                        <span className="text-[10px] md:text-xs font-mono text-muted-foreground">{u.code}</span>
+                      </div>
+                      <div className="flex items-center gap-2 md:gap-4">
+                        <div className="text-right">
+                          <span className="text-xs md:text-sm font-mono text-primary block">LVL {u.level}</span>
+                          <span className="text-[10px] md:text-xs font-mono text-yellow-500">{u.points} XP</span>
+                        </div>
+                        {showBanButtons && (
+                          u.status === 'active' ? (
+                            <Button 
+                              variant="destructive" 
+                              size="sm" 
+                              className="h-7 text-xs gap-1"
+                              onClick={() => handleBanUser(u.id)}
+                              data-testid={`button-ban-user-${u.id}`}
+                            >
+                              <Ban className="w-3 h-3" />
+                              حظر
+                            </Button>
+                          ) : (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-7 text-xs gap-1 border-green-500/50 text-green-500 hover:bg-green-500/10"
+                              onClick={() => handleUnbanUser(u.id)}
+                              data-testid={`button-unban-user-${u.id}`}
+                            >
+                              <UserCheck className="w-3 h-3" />
+                              رفع الحظر
+                            </Button>
+                          )
                         )}
                       </div>
-                      <span className="text-[10px] md:text-xs font-mono text-muted-foreground">{u.code}</span>
                     </div>
-                    <div className="flex items-center gap-2 md:gap-4">
-                      <div className="text-right">
-                        <span className="text-xs md:text-sm font-mono text-primary block">LVL {u.level}</span>
-                        <span className="text-[10px] md:text-xs font-mono text-yellow-500">{u.points} XP</span>
-                      </div>
-                      {u.status === 'active' ? (
-                        <Button 
-                          variant="destructive" 
-                          size="sm" 
-                          className="h-7 text-xs gap-1"
-                          onClick={() => handleBanUser(u.id)}
-                          data-testid={`button-ban-user-${u.id}`}
-                        >
-                          <Ban className="w-3 h-3" />
-                          حظر
-                        </Button>
-                      ) : (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="h-7 text-xs gap-1 border-green-500/50 text-green-500 hover:bg-green-500/10"
-                          onClick={() => handleUnbanUser(u.id)}
-                          data-testid={`button-unban-user-${u.id}`}
-                        >
-                          <UserCheck className="w-3 h-3" />
-                          رفع الحظر
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

@@ -39,11 +39,14 @@ Preferred communication style: Simple, everyday language.
 - **Cooldown Enforcement**: Live countdown timers prevent replay during cooldown period
 - **Server-Side Validation**: Backend validates one-time mission status to prevent API abuse
 
-### Authentication
+### Authentication & Role System
 - Code-based authentication (no traditional username/password)
 - Users enter a unique 10-character alphanumeric code to access the system
 - Session stored in client-side Zustand store
-- Role-based access control: regular users vs admins
+- **Role Hierarchy** (highest to lowest):
+  - `owner`: Full access - can create admins/users, ban everyone, see all codes
+  - `admin`: Limited access - can create users only, ban users only, see all codes
+  - `user`: Regular access - can play missions, cannot see other users' codes in leaderboard
 
 ### Key Design Patterns
 - Shared schema definitions between client and server in `/shared/schema.ts`

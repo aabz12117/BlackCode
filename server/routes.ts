@@ -67,6 +67,27 @@ export async function registerRoutes(
         return res.status(400).json({ message: fromZodError(result.error).message });
       }
 
+      // Server-side role validation: require authorized requester for creating users
+      const requesterId = req.headers['x-requester-id'] as string;
+      if (!requesterId) {
+        return res.status(401).json({ message: "غير مصرح - معرف المستخدم مطلوب" });
+      }
+      
+      const requester = await storage.getUser(requesterId);
+      if (!requester) {
+        return res.status(401).json({ message: "غير مصرح - مستخدم غير موجود" });
+      }
+      
+      // Only owner and admin can create users
+      if (requester.role !== 'owner' && requester.role !== 'admin') {
+        return res.status(403).json({ message: "غير مصرح - صلاحيات غير كافية" });
+      }
+      
+      // Only owner can create admins
+      if (result.data.role === 'admin' && requester.role !== 'owner') {
+        return res.status(403).json({ message: "فقط المالك يستطيع إنشاء مشرفين" });
+      }
+
       const user = await storage.createUser(result.data);
       res.status(201).json(user);
     } catch (error: any) {
@@ -90,6 +111,38 @@ export async function registerRoutes(
 
   app.post("/api/users/:id/ban", async (req, res) => {
     try {
+      // Require requester ID for authorization
+      const requesterId = req.headers['x-requester-id'] as string;
+      if (!requesterId) {
+        return res.status(401).json({ message: "غير مصرح - معرف المستخدم مطلوب" });
+      }
+      
+      const requester = await storage.getUser(requesterId);
+      if (!requester) {
+        return res.status(401).json({ message: "غير مصرح - مستخدم غير موجود" });
+      }
+      
+      // Only owner and admin can ban users
+      if (requester.role !== 'owner' && requester.role !== 'admin') {
+        return res.status(403).json({ message: "غير مصرح - صلاحيات غير كافية" });
+      }
+      
+      // Get the target user to check their role
+      const targetUser = await storage.getUser(req.params.id);
+      if (!targetUser) {
+        return res.status(404).json({ message: "المستخدم غير موجود" });
+      }
+      
+      // Prevent banning owner
+      if (targetUser.role === 'owner') {
+        return res.status(403).json({ message: "لا يمكن حظر المالك" });
+      }
+      
+      // Admin can only ban users, not other admins
+      if (requester.role === 'admin' && targetUser.role === 'admin') {
+        return res.status(403).json({ message: "المشرف يستطيع حظر المستخدمين فقط" });
+      }
+
       const user = await storage.banUser(req.params.id);
       res.json(user);
     } catch (error) {
@@ -100,6 +153,33 @@ export async function registerRoutes(
 
   app.post("/api/users/:id/unban", async (req, res) => {
     try {
+      // Require requester ID for authorization
+      const requesterId = req.headers['x-requester-id'] as string;
+      if (!requesterId) {
+        return res.status(401).json({ message: "غير مصرح - معرف المستخدم مطلوب" });
+      }
+      
+      const requester = await storage.getUser(requesterId);
+      if (!requester) {
+        return res.status(401).json({ message: "غير مصرح - مستخدم غير موجود" });
+      }
+      
+      // Only owner and admin can unban users
+      if (requester.role !== 'owner' && requester.role !== 'admin') {
+        return res.status(403).json({ message: "غير مصرح - صلاحيات غير كافية" });
+      }
+      
+      // Get the target user to check their role
+      const targetUser = await storage.getUser(req.params.id);
+      if (!targetUser) {
+        return res.status(404).json({ message: "المستخدم غير موجود" });
+      }
+      
+      // Admin can only unban users, not other admins
+      if (requester.role === 'admin' && targetUser.role === 'admin') {
+        return res.status(403).json({ message: "المشرف يستطيع رفع الحظر عن المستخدمين فقط" });
+      }
+
       const user = await storage.unbanUser(req.params.id);
       res.json(user);
     } catch (error) {

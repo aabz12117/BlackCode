@@ -29,10 +29,13 @@ export async function getUser(id: string): Promise<User> {
   return res.json();
 }
 
-export async function createUser(data: InsertUser): Promise<User> {
+export async function createUser(data: InsertUser, requesterId?: string): Promise<User> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (requesterId) headers["X-Requester-ID"] = requesterId;
+  
   const res = await fetch("/api/users", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(data),
   });
   
@@ -108,21 +111,35 @@ export async function deleteMission(id: string): Promise<void> {
   if (!res.ok) throw new Error("Failed to delete mission");
 }
 
-export async function banUser(id: string): Promise<User> {
+export async function banUser(id: string, requesterId?: string): Promise<User> {
+  const headers: Record<string, string> = {};
+  if (requesterId) headers["X-Requester-ID"] = requesterId;
+  
   const res = await fetch(`/api/users/${id}/ban`, {
     method: "POST",
+    headers,
   });
   
-  if (!res.ok) throw new Error("Failed to ban user");
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || "Failed to ban user");
+  }
   return res.json();
 }
 
-export async function unbanUser(id: string): Promise<User> {
+export async function unbanUser(id: string, requesterId?: string): Promise<User> {
+  const headers: Record<string, string> = {};
+  if (requesterId) headers["X-Requester-ID"] = requesterId;
+  
   const res = await fetch(`/api/users/${id}/unban`, {
     method: "POST",
+    headers,
   });
   
-  if (!res.ok) throw new Error("Failed to unban user");
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || "Failed to unban user");
+  }
   return res.json();
 }
 

@@ -17,7 +17,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { href: "/profile", icon: User, label: "الملف" },
   ];
 
-  if (user.role === 'admin') {
+  if (user.role === 'admin' || user.role === 'owner') {
     navItems.push({ href: "/admin", icon: LayoutDashboard, label: "الإدارة" });
   }
 

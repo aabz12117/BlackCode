@@ -84,8 +84,14 @@ export default function Profile() {
           <div className="text-center md:text-right space-y-2 flex-1">
             <div className="flex flex-col md:flex-row items-center justify-center md:justify-start gap-2 md:gap-3">
               <h1 className="text-xl md:text-3xl font-display font-bold">{user.name}</h1>
-              <span className="px-2 py-1 rounded text-[10px] md:text-xs font-mono bg-primary/20 text-primary border border-primary/20">
-                {user.role === 'admin' ? 'مشرف النظام' : 'عميل ميداني'}
+              <span className={`px-2 py-1 rounded text-[10px] md:text-xs font-mono border ${
+                user.role === 'owner' 
+                  ? 'bg-purple-500/20 text-purple-400 border-purple-500/20' 
+                  : user.role === 'admin' 
+                    ? 'bg-blue-500/20 text-blue-400 border-blue-500/20' 
+                    : 'bg-primary/20 text-primary border-primary/20'
+              }`}>
+                {user.role === 'owner' ? 'المالك' : user.role === 'admin' ? 'مشرف النظام' : 'عميل ميداني'}
               </span>
             </div>
             <p className="font-mono text-base md:text-xl text-muted-foreground tracking-widest">{user.code}</p>
