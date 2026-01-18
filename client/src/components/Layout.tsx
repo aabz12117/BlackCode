@@ -34,7 +34,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Shield className="w-6 h-6 text-primary" />
-            <h1 className="font-display font-bold text-lg text-primary">NEXUS</h1>
+            <h1 className="font-display font-bold text-lg text-primary">zerocode</h1>
           </div>
           <div className="flex items-center gap-3 text-xs font-mono">
             <span className="text-primary">LVL {user.level}</span>
@@ -49,7 +49,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="p-6 flex items-center gap-3 border-b border-white/5">
             <Shield className="w-8 h-8 text-primary animate-pulse" />
             <div>
-              <h1 className="font-display font-bold text-xl tracking-wider text-primary">NEXUS</h1>
+              <h1 className="font-display font-bold text-xl tracking-wider text-primary">zerocode</h1>
               <p className="text-xs text-muted-foreground font-mono">SECURE ACCESS</p>
             </div>
           </div>
