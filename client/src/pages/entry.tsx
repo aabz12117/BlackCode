@@ -24,7 +24,14 @@ export default function Entry() {
   useEffect(() => {
     fetch("https://api.ipify.org?format=json")
       .then(res => res.json())
-      .then(data => setUserIp(data.ip))
+      .then(data => {
+        const parts = data.ip.split(".");
+        if (parts.length === 4) {
+          setUserIp(`${parts[0]}.${parts[1]}.XXX.XXX`);
+        } else {
+          setUserIp(data.ip);
+        }
+      })
       .catch(() => setUserIp("غير متاح"));
   }, []);
 
@@ -219,7 +226,7 @@ export default function Entry() {
               <Lock className="w-6 h-6 md:w-8 md:h-8 text-primary" />
             </div>
             
-            <h1 className="text-2xl md:text-3xl font-display font-bold text-white mb-2 tracking-wider glitch-effect" data-text="نظام الوصول الآمن">نظام الوصول الآمن</h1>
+            <h1 className="text-2xl md:text-3xl font-display font-bold text-white mb-2 tracking-wider glitch-effect" data-text="دخول نظام المنظمة">دخول نظام المنظمة</h1>
             <p className="text-muted-foreground text-sm font-mono">الرجاء إدخال بيانات التصريح للمتابعة</p>
           </div>
 
@@ -265,12 +272,6 @@ export default function Entry() {
               )}
             </Button>
           </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-xs text-muted-foreground">
-              اضغط على أيقونة المسح لفتح الكاميرا
-            </p>
-          </div>
 
           <div className="mt-8 pt-6 border-t border-white/5 text-center">
             <p className="text-xs text-muted-foreground font-mono">
