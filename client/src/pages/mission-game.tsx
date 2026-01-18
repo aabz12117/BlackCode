@@ -44,7 +44,7 @@ export default function MissionGame() {
   const { user, setUser } = useStore();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [gameState, setGameState] = useState<'playing' | 'won' | 'lost' | 'cooldown'>('playing');
+  const [gameState, setGameState] = useState<'playing' | 'won' | 'lost' | 'cooldown' | 'completed'>('playing');
   const [timeLeft, setTimeLeft] = useState(60);
   const [inputCode, setInputCode] = useState("");
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
@@ -61,9 +61,20 @@ export default function MissionGame() {
     enabled: !!user?.id,
   });
   
-  // Check cooldown on load
+  // Check if one-time mission is already completed
+  const hasCompletedMission = mission && plays.some(p => p.missionId === mission.id && p.completed);
+  const isOneTimeCompleted = mission && !mission.repeatable && hasCompletedMission;
+  
+  // Check cooldown or one-time completion on load
   useEffect(() => {
     if (mission && plays.length >= 0) {
+      // Check for one-time completed first
+      if (!mission.repeatable && plays.some(p => p.missionId === mission.id && p.completed)) {
+        setGameState('completed');
+        return;
+      }
+      
+      // Then check cooldown for repeatable missions
       const remaining = getCooldownRemaining(mission, plays);
       if (remaining > 0) {
         setCooldownRemaining(remaining);
@@ -276,6 +287,27 @@ export default function MissionGame() {
             </div>
             <Link href="/missions">
               <Button variant="outline" className="mt-4 border-orange-500/50 text-orange-500 hover:bg-orange-500/10">
+                العودة للقائمة
+              </Button>
+            </Link>
+          </motion.div>
+        )}
+
+        {gameState === 'completed' && (
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="text-center py-8 md:py-12 space-y-4 md:space-y-6"
+          >
+            <div className="w-16 h-16 md:w-24 md:h-24 bg-green-500/20 rounded-full flex items-center justify-center mx-auto border-2 border-green-500">
+              <CheckCircle2 className="w-8 h-8 md:w-12 md:h-12 text-green-500" />
+            </div>
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold text-green-500 mb-2">تم إكمال المهمة</h2>
+              <p className="text-muted-foreground text-sm md:text-base">هذه المهمة متاحة مرة واحدة فقط وقد أكملتها بنجاح.</p>
+            </div>
+            <Link href="/missions">
+              <Button variant="outline" className="mt-4 border-green-500/50 text-green-500 hover:bg-green-500/10">
                 العودة للقائمة
               </Button>
             </Link>

@@ -30,6 +30,7 @@ export const missions = pgTable("missions", {
   type: text("type").notNull().default("game"), // 'game' | 'challenge'
   difficulty: text("difficulty").notNull().default("easy"), // 'easy' | 'medium' | 'hard' | 'expert'
   cooldown: integer("cooldown").notNull().default(300), // seconds
+  repeatable: boolean("repeatable").notNull().default(true), // true = repeatable with cooldown, false = one-time only
   active: boolean("active").notNull().default(true),
   answer: text("answer").notNull().default(""), // الإجابة الصحيحة للمهمة
   createdAt: timestamp("created_at").notNull().defaultNow(),

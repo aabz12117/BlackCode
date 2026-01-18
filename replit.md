@@ -30,8 +30,14 @@ Preferred communication style: Simple, everyday language.
 - **Database**: PostgreSQL (requires DATABASE_URL environment variable)
 - **Schema Tables**:
   - `users`: id, code (unique access code), name, points, level, role (user/admin), status (active/banned)
-  - `missions`: id, title, description, points, type (game/challenge), difficulty, cooldown, active, answer
+  - `missions`: id, title, description, points, type (game/challenge), difficulty, cooldown, repeatable, active, answer
   - `plays`: id, userId, missionId, score (tracks completed missions)
+
+### Mission System
+- **Repeatable Missions**: If `repeatable=true`, mission can be replayed after cooldown period expires
+- **One-Time Missions**: If `repeatable=false`, mission can only be completed once per user
+- **Cooldown Enforcement**: Live countdown timers prevent replay during cooldown period
+- **Server-Side Validation**: Backend validates one-time mission status to prevent API abuse
 
 ### Authentication
 - Code-based authentication (no traditional username/password)

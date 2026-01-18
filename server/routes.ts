@@ -188,13 +188,24 @@ export async function registerRoutes(
         return res.status(400).json({ message: fromZodError(result.error).message });
       }
 
+      // Check if mission is one-time only and already completed
+      const mission = await storage.getMission(result.data.missionId);
+      if (mission && !mission.repeatable) {
+        const existingPlays = await storage.getUserPlays(result.data.userId);
+        const alreadyCompleted = existingPlays.some(
+          p => p.missionId === result.data.missionId && p.completed
+        );
+        if (alreadyCompleted) {
+          return res.status(400).json({ message: "هذه المهمة متاحة مرة واحدة فقط وقد أكملتها بالفعل" });
+        }
+      }
+
       // Create the play record
       const play = await storage.createPlay(result.data);
 
       // Award points to the user if completed successfully
       if (result.data.completed && result.data.score > 0) {
         const user = await storage.getUser(result.data.userId);
-        const mission = await storage.getMission(result.data.missionId);
         
         if (user && mission) {
           const newPoints = user.points + result.data.score;

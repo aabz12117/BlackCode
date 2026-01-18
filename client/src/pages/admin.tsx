@@ -32,7 +32,8 @@ export default function Admin() {
     type: "game",
     difficulty: "easy",
     cooldown: 300,
-    answer: ""
+    answer: "",
+    repeatable: true
   });
   const [newMission, setNewMission] = useState({
     title: "",
@@ -41,7 +42,8 @@ export default function Admin() {
     type: "game",
     difficulty: "easy",
     cooldown: 300,
-    answer: ""
+    answer: "",
+    repeatable: true
   });
 
   const { data: users = [] } = useQuery({
@@ -168,7 +170,8 @@ export default function Admin() {
         points: Number(newMission.points),
         cooldown: Number(newMission.cooldown),
         type: newMission.type as 'game' | 'challenge',
-        difficulty: newMission.difficulty as 'easy' | 'medium' | 'hard' | 'expert'
+        difficulty: newMission.difficulty as 'easy' | 'medium' | 'hard' | 'expert',
+        repeatable: newMission.repeatable
       });
       
       setIsNewMissionOpen(false);
@@ -179,7 +182,8 @@ export default function Admin() {
         type: "game",
         difficulty: "easy",
         cooldown: 300,
-        answer: ""
+        answer: "",
+        repeatable: true
       });
     } catch (error: any) {
       toast({
@@ -200,6 +204,7 @@ export default function Admin() {
       difficulty: mission.difficulty,
       cooldown: mission.cooldown,
       answer: mission.answer,
+      repeatable: mission.repeatable,
     });
     setIsEditMissionOpen(true);
   };
@@ -218,6 +223,7 @@ export default function Admin() {
           difficulty: editMissionForm.difficulty as 'easy' | 'medium' | 'hard' | 'expert',
           cooldown: Number(editMissionForm.cooldown),
           answer: editMissionForm.answer,
+          repeatable: editMissionForm.repeatable,
         }
       });
       setIsEditMissionOpen(false);
@@ -445,6 +451,20 @@ export default function Admin() {
                       data-testid="input-new-mission-answer"
                     />
                   </div>
+                  <div className="flex items-center justify-between p-3 rounded bg-black/20 border border-white/5">
+                    <div>
+                      <Label className="text-sm">قابلة للتكرار</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {newMission.repeatable ? 'يمكن إعادة المهمة بعد انتهاء وقت الانتظار' : 'مرة واحدة فقط'}
+                      </p>
+                    </div>
+                    <Switch 
+                      checked={newMission.repeatable}
+                      onCheckedChange={(val) => setNewMission({...newMission, repeatable: val})}
+                      className="data-[state=checked]:bg-primary"
+                      data-testid="switch-new-mission-repeatable"
+                    />
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsNewMissionOpen(false)} data-testid="button-cancel-new-mission">إلغاء</Button>
@@ -612,6 +632,20 @@ export default function Admin() {
                     placeholder="أدخل الإجابة الصحيحة للمهمة"
                     className="bg-black/20 font-mono uppercase" 
                     data-testid="input-edit-mission-answer"
+                  />
+                </div>
+                <div className="flex items-center justify-between p-3 rounded bg-black/20 border border-white/5">
+                  <div>
+                    <Label className="text-sm">قابلة للتكرار</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {editMissionForm.repeatable ? 'يمكن إعادة المهمة بعد انتهاء وقت الانتظار' : 'مرة واحدة فقط'}
+                    </p>
+                  </div>
+                  <Switch 
+                    checked={editMissionForm.repeatable}
+                    onCheckedChange={(val) => setEditMissionForm({...editMissionForm, repeatable: val})}
+                    className="data-[state=checked]:bg-primary"
+                    data-testid="switch-edit-mission-repeatable"
                   />
                 </div>
               </div>

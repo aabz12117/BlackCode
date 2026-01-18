@@ -3,7 +3,7 @@ import type { Mission, Play } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import { getMissions, getUserPlays } from "@/lib/api";
 import { motion } from "framer-motion";
-import { Gamepad2, AlertTriangle, Clock, Lock, Star, Play as PlayIcon, Timer } from "lucide-react";
+import { Gamepad2, AlertTriangle, Clock, Lock, Star, Play as PlayIcon, Timer, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
 import { useState, useEffect } from "react";
@@ -87,11 +87,16 @@ export default function Missions() {
 function MissionCard({ mission, plays }: { mission: Mission; plays: Play[] }) {
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   
+  // Check if mission was completed (for one-time missions)
+  const hasCompletedMission = plays.some(p => p.missionId === mission.id && p.completed);
+  const isOneTimeCompleted = !mission.repeatable && hasCompletedMission;
+  
   // Calculate initial cooldown when plays or mission changes
   useEffect(() => {
+    if (isOneTimeCompleted) return; // No cooldown for completed one-time missions
     const remaining = getCooldownRemaining(mission, plays);
     setCooldownRemaining(remaining);
-  }, [plays, mission]);
+  }, [plays, mission, isOneTimeCompleted]);
   
   // Run countdown timer
   useEffect(() => {
@@ -115,12 +120,12 @@ function MissionCard({ mission, plays }: { mission: Mission; plays: Play[] }) {
   };
 
   const isLocked = !mission.active;
-  const isOnCooldown = cooldownRemaining > 0;
+  const isOnCooldown = cooldownRemaining > 0 && !isOneTimeCompleted;
 
   return (
     <motion.div variants={item} className={cn(
       "group relative overflow-hidden rounded-xl border bg-card/50 transition-all duration-300 hover:scale-[1.02]",
-      isLocked || isOnCooldown ? "border-white/5 opacity-70" : "border-primary/20 hover:border-primary/50 hover:shadow-[0_0_30px_-10px_var(--color-primary)]"
+      isLocked || isOnCooldown || isOneTimeCompleted ? "border-white/5 opacity-70" : "border-primary/20 hover:border-primary/50 hover:shadow-[0_0_30px_-10px_var(--color-primary)]"
     )}>
       {/* Background Decor */}
       <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
@@ -157,6 +162,11 @@ function MissionCard({ mission, plays }: { mission: Mission; plays: Play[] }) {
             <button disabled className="w-full py-2.5 md:py-3 rounded bg-white/5 text-muted-foreground font-mono text-xs md:text-sm flex items-center justify-center gap-2 cursor-not-allowed" data-testid={`button-locked-mission-${mission.id}`}>
               <Lock className="w-4 h-4" />
               مغلق حالياً
+            </button>
+          ) : isOneTimeCompleted ? (
+            <button disabled className="w-full py-2.5 md:py-3 rounded bg-green-500/10 text-green-400 border border-green-500/30 font-mono text-xs md:text-sm flex items-center justify-center gap-2 cursor-not-allowed" data-testid={`button-completed-mission-${mission.id}`}>
+              <CheckCircle2 className="w-4 h-4" />
+              <span>تم إكمالها</span>
             </button>
           ) : isOnCooldown ? (
             <button disabled className="w-full py-2.5 md:py-3 rounded bg-orange-500/10 text-orange-400 border border-orange-500/30 font-mono text-xs md:text-sm flex items-center justify-center gap-2 cursor-not-allowed" data-testid={`button-cooldown-mission-${mission.id}`}>
