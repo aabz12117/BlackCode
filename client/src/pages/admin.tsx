@@ -764,14 +764,16 @@ export default function Admin() {
                           )}
                         </div>
                         <span 
-                          className={`text-[10px] md:text-xs font-mono text-muted-foreground cursor-pointer select-none transition-all ${
-                            revealedCodes.has(u.id) ? '' : 'blur-sm hover:blur-none'
+                          className={`text-[10px] md:text-xs font-mono cursor-pointer select-none transition-all duration-200 ${
+                            revealedCodes.has(u.id) 
+                              ? 'text-primary' 
+                              : 'text-muted-foreground blur-[4px]'
                           }`}
                           onClick={() => toggleCodeVisibility(u.id)}
                           title={revealedCodes.has(u.id) ? 'اضغط للإخفاء' : 'اضغط لإظهار الكود'}
                           data-testid={`code-display-${u.id}`}
                         >
-                          {u.code}
+                          {revealedCodes.has(u.id) ? u.code : '••••••••••'}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 md:gap-4">
