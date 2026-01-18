@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useStore } from "@/lib/store";
-import { Shield, Target, Trophy, LogOut, LayoutDashboard, User } from "lucide-react";
+import { Shield, Target, Trophy, LogOut, LayoutDashboard, User, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -37,6 +37,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <h1 className="font-display font-bold text-lg text-primary">zerocode</h1>
           </div>
           <div className="flex items-center gap-3 text-xs font-mono">
+            <button 
+              onClick={() => window.location.reload()}
+              className="p-1.5 text-muted-foreground hover:text-primary transition-colors"
+              data-testid="button-refresh-mobile"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
             <span className="text-primary">LVL {user.level}</span>
             <span className="text-yellow-500">{user.points} XP</span>
           </div>
@@ -102,13 +109,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </div>
             </div>
             
-            <button 
-              onClick={() => logout()}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-md transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              تسجيل خروج
-            </button>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => window.location.reload()}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-primary hover:bg-white/5 rounded-md transition-colors"
+                data-testid="button-refresh-desktop"
+              >
+                <RefreshCw className="w-4 h-4" />
+                تحديث
+              </button>
+              <button 
+                onClick={() => logout()}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                خروج
+              </button>
+            </div>
           </div>
         </aside>
 
