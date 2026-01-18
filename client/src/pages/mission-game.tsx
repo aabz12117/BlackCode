@@ -1,28 +1,92 @@
 import { useEffect, useState } from "react";
-import { useRoute } from "wouter";
+import { useRoute, useLocation } from "wouter";
 import { useStore } from "@/lib/store";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getMission, recordPlay, refreshUser } from "@/lib/api";
+import { getMission, recordPlay, refreshUser, getUserPlays } from "@/lib/api";
 import { motion } from "framer-motion";
-import { ArrowRight, Terminal, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowRight, Terminal, CheckCircle2, XCircle, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
+import type { Mission, Play } from "@shared/schema";
+
+function getCooldownRemaining(mission: Mission | undefined, plays: Play[]): number {
+  if (!mission) return 0;
+  const lastPlay = plays
+    .filter(p => p.missionId === mission.id && p.completed)
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+  
+  if (!lastPlay) return 0;
+  
+  const lastPlayTime = new Date(lastPlay.timestamp).getTime();
+  const cooldownMs = mission.cooldown * 1000;
+  const now = Date.now();
+  const remaining = (lastPlayTime + cooldownMs) - now;
+  
+  return remaining > 0 ? Math.ceil(remaining / 1000) : 0;
+}
+
+function formatCooldown(seconds: number): string {
+  if (seconds <= 0) return "";
+  const hours = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  
+  if (hours > 0) {
+    return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
 
 export default function MissionGame() {
   const [, params] = useRoute("/mission/:id");
+  const [, setLocation] = useLocation();
   const { user, setUser } = useStore();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [gameState, setGameState] = useState<'playing' | 'won' | 'lost'>('playing');
+  const [gameState, setGameState] = useState<'playing' | 'won' | 'lost' | 'cooldown'>('playing');
   const [timeLeft, setTimeLeft] = useState(60);
   const [inputCode, setInputCode] = useState("");
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
   
   const { data: mission } = useQuery({
     queryKey: ["mission", params?.id],
     queryFn: () => getMission(params!.id),
     enabled: !!params?.id,
   });
+  
+  const { data: plays = [] } = useQuery({
+    queryKey: ["plays", user?.id],
+    queryFn: () => getUserPlays(user!.id),
+    enabled: !!user?.id,
+  });
+  
+  // Check cooldown on load
+  useEffect(() => {
+    if (mission && plays.length >= 0) {
+      const remaining = getCooldownRemaining(mission, plays);
+      if (remaining > 0) {
+        setCooldownRemaining(remaining);
+        setGameState('cooldown');
+      }
+    }
+  }, [mission, plays]);
+  
+  // Cooldown timer
+  useEffect(() => {
+    if (gameState === 'cooldown' && cooldownRemaining > 0) {
+      const timer = setInterval(() => {
+        setCooldownRemaining(prev => {
+          if (prev <= 1) {
+            setGameState('playing');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [gameState, cooldownRemaining]);
 
   const recordPlayMutation = useMutation({
     mutationFn: recordPlay,
@@ -188,6 +252,30 @@ export default function MissionGame() {
             </div>
             <Link href="/missions">
               <Button variant="outline" className="mt-4 border-red-500/50 text-red-500 hover:bg-red-500/10">
+                العودة للقائمة
+              </Button>
+            </Link>
+          </motion.div>
+        )}
+
+        {gameState === 'cooldown' && (
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="text-center py-8 md:py-12 space-y-4 md:space-y-6"
+          >
+            <div className="w-16 h-16 md:w-24 md:h-24 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto border-2 border-orange-500">
+              <Timer className="w-8 h-8 md:w-12 md:h-12 text-orange-500 animate-pulse" />
+            </div>
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold text-orange-500 mb-2">فترة انتظار</h2>
+              <p className="text-muted-foreground text-sm md:text-base mb-4">أكملت هذه المهمة مؤخراً. يجب الانتظار قبل إعادة المحاولة.</p>
+              <div className="font-mono text-3xl md:text-4xl text-orange-400 font-bold">
+                {formatCooldown(cooldownRemaining)}
+              </div>
+            </div>
+            <Link href="/missions">
+              <Button variant="outline" className="mt-4 border-orange-500/50 text-orange-500 hover:bg-orange-500/10">
                 العودة للقائمة
               </Button>
             </Link>
