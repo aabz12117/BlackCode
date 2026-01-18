@@ -1,29 +1,33 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useStore } from "@/lib/store";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, ScanLine, AlertCircle, ArrowRight } from "lucide-react";
+import { Lock, ScanLine, ArrowRight, Camera, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { login as apiLogin } from "@/lib/api";
+import { Html5Qrcode } from "html5-qrcode";
 import loginBg from "@assets/generated_images/cyberpunk_digital_security_interface_background.png";
 
 export default function Entry() {
   const [code, setCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
   const [, setLocation] = useLocation();
   const { setUser } = useStore();
   const { toast } = useToast();
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerContainerRef = useRef<HTMLDivElement>(null);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!code) return;
+  const handleLogin = async (inputCode?: string) => {
+    const codeToUse = inputCode || code;
+    if (!codeToUse) return;
     
     setIsLoading(true);
     
     try {
-      const { user } = await apiLogin(code);
+      const { user } = await apiLogin(codeToUse);
       setUser(user);
       
       toast({
@@ -42,6 +46,74 @@ export default function Entry() {
     }
   };
 
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await handleLogin();
+  };
+
+  const startScanner = async () => {
+    setIsScanning(true);
+    
+    try {
+      const scanner = new Html5Qrcode("qr-reader");
+      scannerRef.current = scanner;
+      
+      await scanner.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+        },
+        async (decodedText) => {
+          // QR code scanned successfully
+          await stopScanner();
+          setCode(decodedText.toUpperCase());
+          
+          // Auto-login with scanned code
+          toast({
+            title: "تم مسح الكود",
+            description: `جاري التحقق من الكود: ${decodedText.toUpperCase()}`,
+          });
+          
+          await handleLogin(decodedText.toUpperCase());
+        },
+        () => {
+          // QR code not found - ignore
+        }
+      );
+    } catch (error: any) {
+      console.error("Scanner error:", error);
+      toast({
+        variant: "destructive",
+        title: "خطأ في الكاميرا",
+        description: "تعذر فتح الكاميرا. تأكد من السماح بالوصول للكاميرا.",
+      });
+      setIsScanning(false);
+    }
+  };
+
+  const stopScanner = async () => {
+    if (scannerRef.current) {
+      try {
+        await scannerRef.current.stop();
+        scannerRef.current.clear();
+      } catch (error) {
+        console.error("Error stopping scanner:", error);
+      }
+      scannerRef.current = null;
+    }
+    setIsScanning(false);
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(() => {});
+      }
+    };
+  }, []);
+
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-black">
       {/* Background Image */}
@@ -52,6 +124,48 @@ export default function Entry() {
       
       {/* Overlay Gradient */}
       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent z-10" />
+
+      {/* QR Scanner Modal */}
+      <AnimatePresence>
+        {isScanning && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-card border border-primary/30 rounded-xl p-6 w-full max-w-md"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-primary">مسح رمز QR</h3>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={stopScanner}
+                  className="text-muted-foreground hover:text-white"
+                  data-testid="button-close-scanner"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+              
+              <div 
+                id="qr-reader" 
+                ref={scannerContainerRef}
+                className="w-full aspect-square bg-black/50 rounded-lg overflow-hidden border border-white/10"
+              />
+              
+              <p className="text-center text-sm text-muted-foreground mt-4">
+                وجه الكاميرا نحو رمز QR الخاص بك
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Login Container */}
       <motion.div 
@@ -78,7 +192,7 @@ export default function Entry() {
             <p className="text-muted-foreground text-sm font-mono">الرجاء إدخال بيانات التصريح للمتابعة</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={handleFormSubmit} className="space-y-6">
             <div className="space-y-2">
               <div className="relative group">
                 <ScanLine className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 group-focus-within:text-primary transition-colors" />
@@ -90,26 +204,47 @@ export default function Entry() {
                   onChange={(e) => setCode(e.target.value.toUpperCase())}
                   maxLength={10}
                   disabled={isLoading}
+                  data-testid="input-code"
                 />
               </div>
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full bg-primary hover:bg-primary/90 text-black font-bold py-6 text-lg tracking-wide relative overflow-hidden"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <span className="flex items-center gap-2">
-                  جاري التحقق... <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }} className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full" />
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  تسجيل الدخول <ArrowRight className="w-5 h-5 rotate-180" />
-                </span>
-              )}
-            </Button>
+            <div className="flex gap-3">
+              <Button 
+                type="submit" 
+                className="flex-1 bg-primary hover:bg-primary/90 text-black font-bold py-6 text-lg tracking-wide relative overflow-hidden"
+                disabled={isLoading}
+                data-testid="button-login"
+              >
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    جاري التحقق... <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }} className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full" />
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    تسجيل الدخول <ArrowRight className="w-5 h-5 rotate-180" />
+                  </span>
+                )}
+              </Button>
+              
+              <Button
+                type="button"
+                variant="outline"
+                className="py-6 px-4 border-primary/30 hover:bg-primary/10 hover:border-primary/50"
+                onClick={startScanner}
+                disabled={isLoading || isScanning}
+                data-testid="button-scan-qr"
+              >
+                <Camera className="w-6 h-6 text-primary" />
+              </Button>
+            </div>
           </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-xs text-muted-foreground">
+              أو امسح رمز QR الخاص بك للدخول السريع
+            </p>
+          </div>
 
           <div className="mt-8 pt-6 border-t border-white/5 text-center">
             <p className="text-xs text-muted-foreground font-mono">
