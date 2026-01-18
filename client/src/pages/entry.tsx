@@ -14,11 +14,19 @@ export default function Entry() {
   const [code, setCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [userIp, setUserIp] = useState("...");
   const [, setLocation] = useLocation();
   const { setUser } = useStore();
   const { toast } = useToast();
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch("https://api.ipify.org?format=json")
+      .then(res => res.json())
+      .then(data => setUserIp(data.ip))
+      .catch(() => setUserIp("غير متاح"));
+  }, []);
 
   const handleLogin = async (inputCode?: string) => {
     const codeToUse = inputCode || code;
@@ -268,7 +276,7 @@ export default function Entry() {
             <p className="text-xs text-muted-foreground font-mono">
               النظام محمي ومشفر. جميع محاولات الدخول مسجلة.
               <br />
-              IP: {Math.floor(Math.random()*255)}.{Math.floor(Math.random()*255)}.XXX.XXX
+              IP: {userIp}
             </p>
           </div>
         </div>
