@@ -138,6 +138,15 @@ export default function MissionGame() {
     }
   }, [gameState]);
 
+  // Cleanup QR scanner on unmount
+  useEffect(() => {
+    return () => {
+      if (qrScannerRef.current) {
+        qrScannerRef.current.stop().catch(() => {});
+      }
+    };
+  }, []);
+
   if (!mission) return <div>Mission not found</div>;
 
   const handleVerify = async () => {
@@ -219,14 +228,6 @@ export default function MissionGame() {
     }
     setShowQrScanner(false);
   };
-
-  useEffect(() => {
-    return () => {
-      if (qrScannerRef.current) {
-        qrScannerRef.current.stop().catch(() => {});
-      }
-    };
-  }, []);
 
   return (
     <div className="max-w-2xl mx-auto space-y-4 md:space-y-8">
