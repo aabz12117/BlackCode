@@ -31,6 +31,8 @@ export const missions = pgTable("missions", {
   difficulty: text("difficulty").notNull().default("easy"), // 'easy' | 'medium' | 'hard' | 'expert'
   cooldown: integer("cooldown").notNull().default(300), // seconds
   active: boolean("active").notNull().default(true),
+  missionStatus: text("mission_status").notNull().default("active"), // 'active' | 'locked' | 'completed'
+  answer: text("answer").notNull().default(""), // الإجابة الصحيحة للمهمة
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
