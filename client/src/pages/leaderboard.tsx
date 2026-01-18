@@ -1,15 +1,12 @@
-import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { useQuery } from "@tanstack/react-query";
 import { getLeaderboard as fetchLeaderboard } from "@/lib/api";
 import { motion } from "framer-motion";
-import { Trophy, Medal, Crown, Eye, EyeOff } from "lucide-react";
+import { Trophy, Medal, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function Leaderboard() {
   const { user: currentUser } = useStore();
-  const [revealedCodes, setRevealedCodes] = useState<Set<string>>(new Set());
-  
   const { data: users = [] } = useQuery({
     queryKey: ["leaderboard"],
     queryFn: fetchLeaderboard,
@@ -18,18 +15,6 @@ export default function Leaderboard() {
   
   // Only owner and admin can see user codes
   const canSeeCodes = currentUser?.role === 'owner' || currentUser?.role === 'admin';
-  
-  const toggleCodeVisibility = (userId: string) => {
-    setRevealedCodes(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(userId)) {
-        newSet.delete(userId);
-      } else {
-        newSet.add(userId);
-      }
-      return newSet;
-    });
-  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-4 md:space-y-8">
@@ -73,27 +58,10 @@ export default function Leaderboard() {
                 )}>
                   {user.name}
                 </div>
-                <div className="text-[10px] md:text-xs font-mono text-muted-foreground flex items-center gap-1">
-                  <span>LVL {user.level}</span>
+                <div className="text-[10px] md:text-xs font-mono text-muted-foreground">
+                  LVL {user.level}
                   {canSeeCodes && (
-                    <button 
-                      onClick={() => toggleCodeVisibility(user.id)}
-                      className="mr-2 opacity-60 hover:opacity-100 transition-opacity flex items-center gap-1 cursor-pointer"
-                      data-testid={`button-toggle-code-${user.id}`}
-                    >
-                      <span>•</span>
-                      {revealedCodes.has(user.id) ? (
-                        <>
-                          <span className="text-primary">{user.code}</span>
-                          <EyeOff className="w-3 h-3" />
-                        </>
-                      ) : (
-                        <>
-                          <span>••••••••••</span>
-                          <Eye className="w-3 h-3" />
-                        </>
-                      )}
-                    </button>
+                    <span className="mr-2 opacity-60">• {user.code}</span>
                   )}
                 </div>
               </div>
