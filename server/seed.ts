@@ -69,6 +69,7 @@ export async function seedDatabase() {
         difficulty: "easy",
         active: true,
         cooldown: 300,
+        answer: "DECRYPT",
       },
       {
         title: "اختراق الجدار الناري",
@@ -78,6 +79,7 @@ export async function seedDatabase() {
         difficulty: "medium",
         active: true,
         cooldown: 600,
+        answer: "FIREWALL",
       },
       {
         title: "بروتوكول الظل",
@@ -87,6 +89,7 @@ export async function seedDatabase() {
         difficulty: "hard",
         active: true,
         cooldown: 3600,
+        answer: "SHADOW",
       },
       {
         title: "صائد الثغرات",
@@ -96,6 +99,7 @@ export async function seedDatabase() {
         difficulty: "expert",
         active: false,
         cooldown: 7200,
+        answer: "EXPLOIT",
       },
     ]);
 
