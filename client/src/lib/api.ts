@@ -168,6 +168,26 @@ export async function getLeaderboard(): Promise<User[]> {
   return res.json();
 }
 
+// Admin Stats
+export interface AdminStats {
+  totalUsers: number;
+  totalMissions: number;
+  activeMissions: number;
+  completedPlays: number;
+  bannedUsers: number;
+  mostPopularMission: {
+    id: string;
+    title: string;
+    playCount: number;
+  } | null;
+}
+
+export async function getAdminStats(): Promise<AdminStats> {
+  const res = await fetch("/api/stats");
+  if (!res.ok) throw new Error("Failed to fetch stats");
+  return res.json();
+}
+
 // Refresh user data
 export async function refreshUser(id: string): Promise<User> {
   const res = await fetch(`/api/users/${id}`);

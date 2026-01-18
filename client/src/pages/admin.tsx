@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { useStore } from "@/lib/store";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getUsers, getMissions, createMission as apiCreateMission, toggleMission as apiToggleMission, createUser, updateMission as apiUpdateMission, deleteMission as apiDeleteMission, banUser as apiBanUser, unbanUser as apiUnbanUser, getUserPlays, updateUserFull, addPlayForUser, deletePlay as apiDeletePlay } from "@/lib/api";
-import { ShieldAlert, Users, Plus, QrCode, Target, Trash2, Edit, Ban, UserCheck, Settings, CheckCircle2, XCircle, History } from "lucide-react";
+import { getUsers, getMissions, createMission as apiCreateMission, toggleMission as apiToggleMission, createUser, updateMission as apiUpdateMission, deleteMission as apiDeleteMission, banUser as apiBanUser, unbanUser as apiUnbanUser, getUserPlays, updateUserFull, addPlayForUser, deletePlay as apiDeletePlay, getAdminStats } from "@/lib/api";
+import { ShieldAlert, Users, Plus, QrCode, Target, Trash2, Edit, Ban, UserCheck, Settings, CheckCircle2, XCircle, History, BarChart3, Search, TrendingUp, Activity } from "lucide-react";
 import type { User, Play } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +52,8 @@ export default function Admin() {
   const [editUserForm, setEditUserForm] = useState({ name: "", code: "", points: 0, level: 1 });
   const [editingUserPlays, setEditingUserPlays] = useState<Play[]>([]);
   const [addPlayMissionId, setAddPlayMissionId] = useState<string>("");
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [missionSearchQuery, setMissionSearchQuery] = useState("");
   const [newMission, setNewMission] = useState({
     title: "",
     description: "",
@@ -74,6 +76,11 @@ export default function Admin() {
   const { data: missions = [] } = useQuery({
     queryKey: ["missions"],
     queryFn: () => getMissions(),
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ["admin-stats"],
+    queryFn: getAdminStats,
   });
 
   const isOwner = user?.role === 'owner';
@@ -489,6 +496,68 @@ export default function Admin() {
         </div>
       </div>
 
+      {/* Stats Section */}
+      {stats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <Card className="bg-card/50 border-white/10">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-500/20 rounded-lg">
+                  <Users className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-blue-400">{stats.totalUsers}</p>
+                  <p className="text-xs text-muted-foreground">مستخدم</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-card/50 border-white/10">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-500/20 rounded-lg">
+                  <Target className="w-5 h-5 text-green-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-green-400">{stats.activeMissions}/{stats.totalMissions}</p>
+                  <p className="text-xs text-muted-foreground">مهمة نشطة</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-card/50 border-white/10">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-yellow-500/20 rounded-lg">
+                  <Activity className="w-5 h-5 text-yellow-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-yellow-400">{stats.completedPlays}</p>
+                  <p className="text-xs text-muted-foreground">إكمال مهمة</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-card/50 border-white/10">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-500/20 rounded-lg">
+                  <TrendingUp className="w-5 h-5 text-purple-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-purple-400 truncate max-w-[100px]" title={stats.mostPopularMission?.title}>
+                    {stats.mostPopularMission?.title || '-'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {stats.mostPopularMission ? `${stats.mostPopularMission.playCount} لعبة` : 'الأكثر شعبية'}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       <Tabs defaultValue="codes" className="w-full">
         <TabsList className="grid w-full grid-cols-3 bg-card border border-white/5 text-xs md:text-sm">
           <TabsTrigger value="codes" className="text-xs md:text-sm" data-testid="tab-codes">الأكواد</TabsTrigger>
@@ -561,8 +630,19 @@ export default function Admin() {
         </TabsContent>
 
         <TabsContent value="missions" className="space-y-4 mt-4 md:mt-6">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <h3 className="text-lg md:text-xl font-bold font-display">قائمة المهام الحالية</h3>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <div className="relative flex-1 sm:flex-initial">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input 
+                  placeholder="بحث في المهام..." 
+                  value={missionSearchQuery}
+                  onChange={(e) => setMissionSearchQuery(e.target.value)}
+                  className="bg-black/20 pr-10 text-sm h-9"
+                  data-testid="input-search-missions"
+                />
+              </div>
             <Dialog open={isNewMissionOpen} onOpenChange={setIsNewMissionOpen}>
               <DialogTrigger asChild>
                 <Button className="bg-primary text-black font-bold hover:bg-primary/90 gap-2 text-xs md:text-sm" data-testid="button-new-mission">
@@ -764,12 +844,17 @@ export default function Admin() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
 
           <Card className="bg-card/50 border-white/10">
             <CardContent className="p-0">
               <div className="divide-y divide-white/5">
-                {missions.map(mission => (
+                {missions.filter(m => 
+                  missionSearchQuery === '' || 
+                  m.title.toLowerCase().includes(missionSearchQuery.toLowerCase()) ||
+                  m.description.toLowerCase().includes(missionSearchQuery.toLowerCase())
+                ).map(mission => (
                   <div key={mission.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 md:p-4 hover:bg-white/5 transition-colors gap-3">
                     <div className="flex items-center gap-3 md:gap-4">
                       <div className={`p-1.5 md:p-2 rounded bg-white/5 ${mission.active ? 'text-primary' : 'text-muted-foreground'}`}>
@@ -1049,14 +1134,30 @@ export default function Admin() {
         <TabsContent value="users" className="mt-4 md:mt-6">
           <Card className="bg-card/50 border-white/10">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                <Users className="w-4 h-4 md:w-5 md:h-5" />
-                إدارة المستخدمين
-              </CardTitle>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                  <Users className="w-4 h-4 md:w-5 md:h-5" />
+                  إدارة المستخدمين
+                </CardTitle>
+                <div className="relative">
+                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="بحث عن مستخدم..." 
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                    className="bg-black/20 pr-10 text-sm h-9 w-full sm:w-60"
+                    data-testid="input-search-users"
+                  />
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {users.filter(u => u.id !== user?.id).map(u => {
+                {users.filter(u => u.id !== user?.id).filter(u =>
+                  userSearchQuery === '' ||
+                  u.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+                  u.code.toLowerCase().includes(userSearchQuery.toLowerCase())
+                ).map(u => {
                   const getRoleBadge = (role: string) => {
                     if (role === 'owner') return { label: 'مالك', className: 'bg-purple-500/20 text-purple-400' };
                     if (role === 'admin') return { label: 'مشرف', className: 'bg-blue-500/20 text-blue-400' };
@@ -1112,16 +1213,36 @@ export default function Admin() {
                         )}
                         {showBanButtons && (
                           u.status === 'active' ? (
-                            <Button 
-                              variant="destructive" 
-                              size="sm" 
-                              className="h-7 text-xs gap-1"
-                              onClick={() => handleBanUser(u.id)}
-                              data-testid={`button-ban-user-${u.id}`}
-                            >
-                              <Ban className="w-3 h-3" />
-                              حظر
-                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button 
+                                  variant="destructive" 
+                                  size="sm" 
+                                  className="h-7 text-xs gap-1"
+                                  data-testid={`button-ban-user-${u.id}`}
+                                >
+                                  <Ban className="w-3 h-3" />
+                                  حظر
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="bg-card border-white/10">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle className="text-destructive">تأكيد الحظر</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    هل أنت متأكد من حظر المستخدم "{u.name}"؟ لن يتمكن من تسجيل الدخول حتى يتم رفع الحظر.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel className="bg-white/10 border-white/20 hover:bg-white/20">إلغاء</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={() => handleBanUser(u.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    تأكيد الحظر
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           ) : (
                             <Button 
                               variant="outline" 

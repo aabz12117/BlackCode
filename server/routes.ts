@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertMissionSchema, insertPlaySchema } from "@shared/schema";
+import { insertUserSchema, insertMissionSchema, insertPlaySchema, type Mission } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 
 export async function registerRoutes(
@@ -323,6 +323,52 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Get leaderboard error:", error);
       res.status(500).json({ message: "Failed to fetch leaderboard" });
+    }
+  });
+
+  // Admin Stats
+  app.get("/api/stats", async (req, res) => {
+    try {
+      const [users, missions, plays] = await Promise.all([
+        storage.getAllUsers(),
+        storage.getAllMissions(),
+        storage.getAllPlays()
+      ]);
+      
+      const completedPlays = plays.filter(p => p.completed);
+      const regularUsers = users.filter(u => u.role === 'user');
+      const bannedUsers = users.filter(u => u.status === 'banned');
+      
+      // Find most popular mission
+      const missionPlayCounts: Record<string, number> = {};
+      completedPlays.forEach(play => {
+        missionPlayCounts[play.missionId] = (missionPlayCounts[play.missionId] || 0) + 1;
+      });
+      
+      let mostPopularMission: Mission | null | undefined = null;
+      let maxPlays = 0;
+      Object.entries(missionPlayCounts).forEach(([missionId, count]) => {
+        if (count > maxPlays) {
+          maxPlays = count;
+          mostPopularMission = missions.find(m => m.id === missionId);
+        }
+      });
+      
+      res.json({
+        totalUsers: regularUsers.length,
+        totalMissions: missions.length,
+        activeMissions: missions.filter(m => m.active).length,
+        completedPlays: completedPlays.length,
+        bannedUsers: bannedUsers.length,
+        mostPopularMission: mostPopularMission ? {
+          id: mostPopularMission.id,
+          title: mostPopularMission.title,
+          playCount: maxPlays
+        } : null
+      });
+    } catch (error) {
+      console.error("Get stats error:", error);
+      res.status(500).json({ message: "Failed to fetch stats" });
     }
   });
 

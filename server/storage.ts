@@ -31,6 +31,9 @@ export interface IStorage {
   
   // Leaderboard
   getLeaderboard(): Promise<User[]>;
+  
+  // Stats
+  getAllPlays(): Promise<Play[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -182,6 +185,11 @@ export class DatabaseStorage implements IStorage {
       .from(users)
       .where(and(eq(users.role, 'user'), eq(users.status, 'active')))
       .orderBy(desc(users.points));
+  }
+
+  // Stats
+  async getAllPlays(): Promise<Play[]> {
+    return await db.select().from(plays);
   }
 }
 

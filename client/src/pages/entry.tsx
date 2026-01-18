@@ -52,10 +52,13 @@ export default function Entry() {
       });
       setLocation("/missions");
     } catch (error: any) {
+      const isBanned = error.message?.includes("banned") || error.message?.includes("محظور");
       toast({
         variant: "destructive",
-        title: "فشل الدخول",
-        description: error.message || "الكود غير صحيح أو غير نشط.",
+        title: isBanned ? "تم حظرك من النظام" : "فشل الدخول",
+        description: isBanned 
+          ? "لقد تم حظر حسابك من استخدام النظام. تواصل مع المسؤول للمزيد من المعلومات." 
+          : (error.message || "الكود غير صحيح أو غير نشط."),
       });
       setIsLoading(false);
     }
