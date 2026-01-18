@@ -33,6 +33,8 @@ export const missions = pgTable("missions", {
   repeatable: boolean("repeatable").notNull().default(true), // true = repeatable with cooldown, false = one-time only
   active: boolean("active").notNull().default(true),
   answer: text("answer").notNull().default(""), // الإجابة الصحيحة للمهمة
+  hintUrl: text("hint_url"), // رابط اختياري للمساعدة في إيجاد الإجابة
+  targetUsers: text("target_users").array(), // قائمة معرفات المستخدمين المستهدفين، فارغة = للجميع
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

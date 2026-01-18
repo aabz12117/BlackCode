@@ -63,6 +63,14 @@ export default function Missions() {
     enabled: !!user?.id,
   });
 
+  // Filter missions based on targetUsers - show if no target (for all) or user is in target list
+  const filteredMissions = missions.filter(mission => {
+    if (!mission.targetUsers || mission.targetUsers.length === 0) {
+      return true; // Available for everyone
+    }
+    return user && mission.targetUsers.includes(user.id);
+  });
+
   return (
     <div className="space-y-4 md:space-y-8">
       <div className="flex flex-col gap-1 md:gap-2">
@@ -76,7 +84,7 @@ export default function Missions() {
         animate="show"
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6"
       >
-        {missions.map((mission) => (
+        {filteredMissions.map((mission) => (
           <MissionCard key={mission.id} mission={mission} plays={plays} />
         ))}
       </motion.div>

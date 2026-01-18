@@ -250,6 +250,17 @@ export default function MissionGame() {
             <div className="text-center space-y-1 md:space-y-2">
               <h2 className="text-xl md:text-2xl font-bold font-display text-primary">{mission.title}</h2>
               <p className="text-muted-foreground text-sm md:text-base">{mission.description}</p>
+              {mission.hintUrl && (
+                <a 
+                  href={mission.hintUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-block mt-2 text-xs md:text-sm text-secondary hover:text-primary transition-colors underline"
+                  data-testid="link-mission-hint"
+                >
+                  💡 اضغط هنا للمساعدة في إيجاد الإجابة
+                </a>
+              )}
             </div>
 
             <div className="bg-black/60 rounded-lg p-4 md:p-6 border border-white/10 text-center space-y-3 md:space-y-4">

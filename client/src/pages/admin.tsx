@@ -28,6 +28,8 @@ export default function Admin() {
   const [isNewMissionOpen, setIsNewMissionOpen] = useState(false);
   const [isEditMissionOpen, setIsEditMissionOpen] = useState(false);
   const [editingMissionId, setEditingMissionId] = useState<string | null>(null);
+  const [newMissionTargetAll, setNewMissionTargetAll] = useState(true);
+  const [editMissionTargetAll, setEditMissionTargetAll] = useState(true);
   const [editMissionForm, setEditMissionForm] = useState({
     title: "",
     description: "",
@@ -36,7 +38,9 @@ export default function Admin() {
     difficulty: "easy",
     cooldown: 300,
     answer: "",
-    repeatable: true
+    repeatable: true,
+    hintUrl: "",
+    targetUsers: [] as string[]
   });
   const [newMission, setNewMission] = useState({
     title: "",
@@ -46,7 +50,9 @@ export default function Admin() {
     difficulty: "easy",
     cooldown: 300,
     answer: "",
-    repeatable: true
+    repeatable: true,
+    hintUrl: "",
+    targetUsers: [] as string[]
   });
 
   const { data: users = [] } = useQuery({
@@ -224,7 +230,9 @@ export default function Admin() {
         cooldown: Number(newMission.cooldown),
         type: newMission.type as 'game' | 'challenge',
         difficulty: newMission.difficulty as 'easy' | 'medium' | 'hard' | 'expert',
-        repeatable: newMission.repeatable
+        repeatable: newMission.repeatable,
+        hintUrl: newMission.hintUrl || null,
+        targetUsers: newMissionTargetAll ? null : (newMission.targetUsers.length > 0 ? newMission.targetUsers : null)
       });
       
       setIsNewMissionOpen(false);
@@ -236,8 +244,11 @@ export default function Admin() {
         difficulty: "easy",
         cooldown: 300,
         answer: "",
-        repeatable: true
+        repeatable: true,
+        hintUrl: "",
+        targetUsers: []
       });
+      setNewMissionTargetAll(true);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -258,7 +269,10 @@ export default function Admin() {
       cooldown: mission.cooldown,
       answer: mission.answer,
       repeatable: mission.repeatable,
+      hintUrl: mission.hintUrl || "",
+      targetUsers: mission.targetUsers || [],
     });
+    setEditMissionTargetAll(!mission.targetUsers || mission.targetUsers.length === 0);
     setIsEditMissionOpen(true);
   };
 
@@ -277,6 +291,8 @@ export default function Admin() {
           cooldown: Number(editMissionForm.cooldown),
           answer: editMissionForm.answer,
           repeatable: editMissionForm.repeatable,
+          hintUrl: editMissionForm.hintUrl || null,
+          targetUsers: editMissionTargetAll ? null : (editMissionForm.targetUsers.length > 0 ? editMissionForm.targetUsers : null)
         }
       });
       setIsEditMissionOpen(false);
@@ -528,6 +544,64 @@ export default function Admin() {
                       data-testid="input-new-mission-answer"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label>رابط المساعدة (اختياري)</Label>
+                    <Input 
+                      value={newMission.hintUrl}
+                      onChange={(e) => setNewMission({...newMission, hintUrl: e.target.value})}
+                      placeholder="https://example.com/hint"
+                      className="bg-black/20 text-sm" 
+                      dir="ltr"
+                      data-testid="input-new-mission-hint-url"
+                    />
+                    <p className="text-xs text-muted-foreground">رابط يحتوي على دليل للإجابة</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>المستخدمين المستهدفين</Label>
+                    <Select 
+                      value={newMissionTargetAll ? "all" : "specific"}
+                      onValueChange={(val) => {
+                        if (val === "all") {
+                          setNewMissionTargetAll(true);
+                          setNewMission({...newMission, targetUsers: []});
+                        } else {
+                          setNewMissionTargetAll(false);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="bg-black/20" data-testid="select-new-mission-target">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">للجميع</SelectItem>
+                        <SelectItem value="specific">مستخدمين محددين</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {!newMissionTargetAll && newMission.targetUsers.length > 0 && (
+                      <p className="text-xs text-muted-foreground">تم اختيار {newMission.targetUsers.length} مستخدم</p>
+                    )}
+                  </div>
+                  {newMissionTargetAll ? null : (
+                    <div className="space-y-2 max-h-32 overflow-y-auto bg-black/20 p-2 rounded border border-white/5">
+                      {users.filter(u => u.role === 'user').map(u => (
+                        <label key={u.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-white/5 p-1 rounded">
+                          <input
+                            type="checkbox"
+                            checked={newMission.targetUsers.includes(u.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setNewMission({...newMission, targetUsers: [...newMission.targetUsers, u.id]});
+                              } else {
+                                setNewMission({...newMission, targetUsers: newMission.targetUsers.filter(id => id !== u.id)});
+                              }
+                            }}
+                            className="rounded"
+                          />
+                          <span>{u.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
                   <div className="flex items-center justify-between p-3 rounded bg-black/20 border border-white/5">
                     <div>
                       <Label className="text-sm">قابلة للتكرار</Label>
@@ -711,6 +785,64 @@ export default function Admin() {
                     data-testid="input-edit-mission-answer"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label>رابط المساعدة (اختياري)</Label>
+                  <Input 
+                    value={editMissionForm.hintUrl}
+                    onChange={(e) => setEditMissionForm({...editMissionForm, hintUrl: e.target.value})}
+                    placeholder="https://example.com/hint"
+                    className="bg-black/20 text-sm" 
+                    dir="ltr"
+                    data-testid="input-edit-mission-hint-url"
+                  />
+                  <p className="text-xs text-muted-foreground">رابط يحتوي على دليل للإجابة</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>المستخدمين المستهدفين</Label>
+                  <Select 
+                    value={editMissionTargetAll ? "all" : "specific"}
+                    onValueChange={(val) => {
+                      if (val === "all") {
+                        setEditMissionTargetAll(true);
+                        setEditMissionForm({...editMissionForm, targetUsers: []});
+                      } else {
+                        setEditMissionTargetAll(false);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="bg-black/20" data-testid="select-edit-mission-target">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">للجميع</SelectItem>
+                      <SelectItem value="specific">مستخدمين محددين</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {!editMissionTargetAll && editMissionForm.targetUsers.length > 0 && (
+                    <p className="text-xs text-muted-foreground">تم اختيار {editMissionForm.targetUsers.length} مستخدم</p>
+                  )}
+                </div>
+                {editMissionTargetAll ? null : (
+                  <div className="space-y-2 max-h-32 overflow-y-auto bg-black/20 p-2 rounded border border-white/5">
+                    {users.filter(u => u.role === 'user').map(u => (
+                      <label key={u.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-white/5 p-1 rounded">
+                        <input
+                          type="checkbox"
+                          checked={editMissionForm.targetUsers.includes(u.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setEditMissionForm({...editMissionForm, targetUsers: [...editMissionForm.targetUsers, u.id]});
+                            } else {
+                              setEditMissionForm({...editMissionForm, targetUsers: editMissionForm.targetUsers.filter(id => id !== u.id)});
+                            }
+                          }}
+                          className="rounded"
+                        />
+                        <span>{u.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
                 <div className="flex items-center justify-between p-3 rounded bg-black/20 border border-white/5">
                   <div>
                     <Label className="text-sm">قابلة للتكرار</Label>
