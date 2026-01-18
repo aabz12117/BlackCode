@@ -773,7 +773,7 @@ export default function Admin() {
                           title={revealedCodes.has(u.id) ? 'اضغط للإخفاء' : 'اضغط لإظهار الكود'}
                           data-testid={`code-display-${u.id}`}
                         >
-                          {revealedCodes.has(u.id) ? u.code : '••••••••••'}
+                          {u.code}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 md:gap-4">

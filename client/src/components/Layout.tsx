@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useStore } from "@/lib/store";
 import { Shield, Target, Trophy, LogOut, LayoutDashboard, User } from "lucide-react";
@@ -6,6 +7,7 @@ import { cn } from "@/lib/utils";
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { user, logout } = useStore();
+  const [showCode, setShowCode] = useState(false);
 
   if (!user) {
     return <>{children}</>;
@@ -75,7 +77,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <div className="bg-black/40 rounded-lg p-4 mb-4 font-mono text-xs border border-white/5">
               <div className="flex justify-between mb-1">
                 <span className="text-muted-foreground">USER:</span>
-                <span className="text-accent">{user.code}</span>
+                <span 
+                  className={`cursor-pointer select-none transition-all duration-200 ${
+                    showCode ? 'text-primary' : 'text-accent blur-[4px]'
+                  }`}
+                  onClick={() => setShowCode(!showCode)}
+                  title={showCode ? 'اضغط للإخفاء' : 'اضغط لإظهار الكود'}
+                >
+                  {user.code}
+                </span>
               </div>
               <div className="flex justify-between mb-1">
                 <span className="text-muted-foreground">LVL:</span>

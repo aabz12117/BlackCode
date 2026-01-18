@@ -97,13 +97,13 @@ export default function Profile() {
             </div>
             <p 
               className={`font-mono text-base md:text-xl tracking-widest cursor-pointer select-none transition-all duration-200 ${
-                showCode ? 'text-primary' : 'text-muted-foreground'
+                showCode ? 'text-primary' : 'text-muted-foreground blur-[5px]'
               }`}
               onClick={() => setShowCode(!showCode)}
               title={showCode ? 'اضغط للإخفاء' : 'اضغط لإظهار الكود'}
               data-testid="profile-code-display"
             >
-              {showCode ? user.code : '••••••••••'}
+              {user.code}
             </p>
             
             <div className="flex flex-wrap gap-2 md:gap-4 justify-center md:justify-start mt-3 md:mt-4">
