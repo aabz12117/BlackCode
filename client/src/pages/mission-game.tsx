@@ -1,14 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useStore } from "@/lib/store";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getMission, recordPlay, refreshUser, getUserPlays } from "@/lib/api";
 import { motion } from "framer-motion";
-import { ArrowRight, Terminal, CheckCircle2, XCircle, Timer } from "lucide-react";
+import { ArrowRight, Terminal, CheckCircle2, XCircle, Timer, QrCode, Camera, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import type { Mission, Play } from "@shared/schema";
+import { Html5Qrcode } from "html5-qrcode";
 
 function getCooldownRemaining(mission: Mission | undefined, plays: Play[]): number {
   if (!mission) return 0;
@@ -48,6 +49,9 @@ export default function MissionGame() {
   const [timeLeft, setTimeLeft] = useState(60);
   const [inputCode, setInputCode] = useState("");
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const [showQrScanner, setShowQrScanner] = useState(false);
+  const qrScannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerContainerId = "qr-reader";
   
   const { data: mission } = useQuery({
     queryKey: ["mission", params?.id],
@@ -167,6 +171,63 @@ export default function MissionGame() {
     }
   };
 
+  const startQrScanner = async () => {
+    setShowQrScanner(true);
+    
+    setTimeout(async () => {
+      try {
+        const html5QrCode = new Html5Qrcode(scannerContainerId);
+        qrScannerRef.current = html5QrCode;
+        
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+          },
+          (decodedText) => {
+            setInputCode(decodedText);
+            stopQrScanner();
+            toast({
+              title: "تم مسح الكود!",
+              description: "تم قراءة الكود بنجاح.",
+              className: "bg-primary/20 border-primary text-primary"
+            });
+          },
+          () => {}
+        );
+      } catch (err) {
+        console.error("Error starting QR scanner:", err);
+        toast({
+          variant: "destructive",
+          title: "خطأ في الكاميرا",
+          description: "تعذر تشغيل الكاميرا. تأكد من السماح بالوصول للكاميرا.",
+        });
+        setShowQrScanner(false);
+      }
+    }, 100);
+  };
+
+  const stopQrScanner = async () => {
+    if (qrScannerRef.current) {
+      try {
+        await qrScannerRef.current.stop();
+        qrScannerRef.current = null;
+      } catch (err) {
+        console.error("Error stopping QR scanner:", err);
+      }
+    }
+    setShowQrScanner(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (qrScannerRef.current) {
+        qrScannerRef.current.stop().catch(() => {});
+      }
+    };
+  }, []);
+
   return (
     <div className="max-w-2xl mx-auto space-y-4 md:space-y-8">
       <div className="flex items-center justify-between">
@@ -218,12 +279,62 @@ export default function MissionGame() {
                   placeholder="أدخل الرمز هنا..."
                   className="w-full bg-black/40 border border-white/10 rounded-lg py-2.5 md:py-3 px-10 text-center font-mono text-base md:text-lg tracking-widest focus:outline-none focus:border-primary transition-colors uppercase"
                   autoFocus
+                  data-testid="input-mission-code"
                 />
               </div>
-              <Button onClick={handleVerify} className="w-full bg-primary hover:bg-primary/90 text-black font-bold py-2.5 md:py-3">
-                تحقق من الكود
-              </Button>
+              
+              <div className="flex gap-2">
+                <Button 
+                  onClick={startQrScanner} 
+                  variant="outline"
+                  className="flex-1 border-primary/50 text-primary hover:bg-primary/10 py-2.5 md:py-3"
+                  data-testid="button-scan-qr"
+                >
+                  <QrCode className="w-4 h-4 ml-2" />
+                  مسح QR
+                </Button>
+                <Button 
+                  onClick={handleVerify} 
+                  className="flex-1 bg-primary hover:bg-primary/90 text-black font-bold py-2.5 md:py-3"
+                  data-testid="button-verify-code"
+                >
+                  تحقق من الكود
+                </Button>
+              </div>
             </div>
+
+            {showQrScanner && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+              >
+                <div className="bg-card border border-primary/30 rounded-xl p-4 w-full max-w-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-primary flex items-center gap-2">
+                      <Camera className="w-5 h-5" />
+                      مسح رمز QR
+                    </h3>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={stopQrScanner}
+                      className="text-muted-foreground hover:text-destructive"
+                      data-testid="button-close-qr-scanner"
+                    >
+                      <X className="w-5 h-5" />
+                    </Button>
+                  </div>
+                  <div 
+                    id={scannerContainerId} 
+                    className="w-full aspect-square rounded-lg overflow-hidden bg-black"
+                  />
+                  <p className="text-center text-muted-foreground text-xs mt-3">
+                    وجّه الكاميرا نحو رمز QR لمسحه
+                  </p>
+                </div>
+              </motion.div>
+            )}
           </div>
         )}
 
