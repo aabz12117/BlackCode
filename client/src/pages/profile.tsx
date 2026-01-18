@@ -99,8 +99,13 @@ export default function Profile() {
               className={`font-mono text-base md:text-xl tracking-widest cursor-pointer select-none transition-all duration-200 ${
                 showCode ? 'text-primary' : 'text-muted-foreground blur-[5px]'
               }`}
-              onClick={() => setShowCode(!showCode)}
-              title={showCode ? 'اضغط للإخفاء' : 'اضغط لإظهار الكود'}
+              onClick={() => {
+                if (showCode) {
+                  navigator.clipboard.writeText(user.code);
+                }
+                setShowCode(!showCode);
+              }}
+              title={showCode ? 'اضغط للنسخ والإخفاء' : 'اضغط لإظهار الكود'}
               data-testid="profile-code-display"
             >
               {user.code}

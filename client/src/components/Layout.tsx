@@ -81,8 +81,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   className={`cursor-pointer select-none transition-all duration-200 ${
                     showCode ? 'text-primary' : 'text-accent blur-[4px]'
                   }`}
-                  onClick={() => setShowCode(!showCode)}
-                  title={showCode ? 'اضغط للإخفاء' : 'اضغط لإظهار الكود'}
+                  onClick={() => {
+                    if (showCode) {
+                      navigator.clipboard.writeText(user.code);
+                    }
+                    setShowCode(!showCode);
+                  }}
+                  title={showCode ? 'اضغط للنسخ والإخفاء' : 'اضغط لإظهار الكود'}
                 >
                   {user.code}
                 </span>

@@ -769,8 +769,13 @@ export default function Admin() {
                               ? 'text-primary' 
                               : 'text-muted-foreground blur-[4px]'
                           }`}
-                          onClick={() => toggleCodeVisibility(u.id)}
-                          title={revealedCodes.has(u.id) ? 'اضغط للإخفاء' : 'اضغط لإظهار الكود'}
+                          onClick={() => {
+                            if (revealedCodes.has(u.id)) {
+                              navigator.clipboard.writeText(u.code);
+                            }
+                            toggleCodeVisibility(u.id);
+                          }}
+                          title={revealedCodes.has(u.id) ? 'اضغط للنسخ والإخفاء' : 'اضغط لإظهار الكود'}
                           data-testid={`code-display-${u.id}`}
                         >
                           {u.code}
