@@ -31,7 +31,8 @@ export default function Admin() {
     points: 100,
     type: "game",
     difficulty: "easy",
-    cooldown: 300
+    cooldown: 300,
+    answer: ""
   });
 
   // Fetch data
@@ -122,7 +123,8 @@ export default function Admin() {
         points: 100,
         type: "game",
         difficulty: "easy",
-        cooldown: 300
+        cooldown: 300,
+        answer: ""
       });
     } catch (error: any) {
       toast({
@@ -281,6 +283,15 @@ export default function Admin() {
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>الإجابة الصحيحة</Label>
+                    <Input 
+                      value={newMission.answer}
+                      onChange={(e) => setNewMission({...newMission, answer: e.target.value})}
+                      placeholder="أدخل الإجابة الصحيحة للمهمة"
+                      className="bg-black/20 font-mono uppercase" 
+                    />
                   </div>
                 </div>
                 <DialogFooter>

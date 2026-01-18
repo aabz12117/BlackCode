@@ -17,7 +17,6 @@ export default function MissionGame() {
   const [gameState, setGameState] = useState<'playing' | 'won' | 'lost'>('playing');
   const [timeLeft, setTimeLeft] = useState(60);
   const [inputCode, setInputCode] = useState("");
-  const [sequence, setSequence] = useState<string[]>([]);
   
   const { data: mission } = useQuery({
     queryKey: ["mission", params?.id],
@@ -33,7 +32,7 @@ export default function MissionGame() {
     },
   });
 
-  // Initialize Game
+  // Timer
   useEffect(() => {
     if (gameState === 'playing') {
       const timer = setInterval(() => {
@@ -50,19 +49,13 @@ export default function MissionGame() {
     }
   }, [gameState]);
 
-  // Generate random sequence for the "game"
-  useEffect(() => {
-    const chars = "0123456789ABCDEF";
-    const seq = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]);
-    setSequence(seq);
-  }, []);
-
   if (!mission) return <div>Mission not found</div>;
 
   const handleVerify = async () => {
     if (!user || !mission) return;
     
-    if (inputCode.toUpperCase() === sequence.join("")) {
+    // التحقق من الإجابة الصحيحة من قاعدة البيانات
+    if (inputCode.toUpperCase() === mission.answer.toUpperCase()) {
       setGameState('won');
       
       // Record the play
@@ -113,9 +106,9 @@ export default function MissionGame() {
             </div>
 
             <div className="bg-black/60 rounded-lg p-6 border border-white/10 text-center space-y-4">
-              <p className="font-mono text-sm text-muted-foreground mb-4">قم بفك تشفير التسلسل التالي:</p>
+              <p className="font-mono text-sm text-muted-foreground mb-4">أدخل الإجابة الصحيحة لإكمال المهمة:</p>
               <div className="flex justify-center gap-2">
-                {sequence.map((char, idx) => (
+                {mission.answer.split('').map((_, idx) => (
                   <motion.div
                     key={idx}
                     initial={{ opacity: 0, y: 10 }}
@@ -123,10 +116,11 @@ export default function MissionGame() {
                     transition={{ delay: idx * 0.1 }}
                     className="w-10 h-12 bg-primary/10 border border-primary/30 rounded flex items-center justify-center font-mono text-xl font-bold text-primary"
                   >
-                    {char}
+                    ?
                   </motion.div>
                 ))}
               </div>
+              <p className="text-xs text-muted-foreground mt-2">عدد الأحرف: {mission.answer.length}</p>
             </div>
 
             <div className="space-y-4">
