@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useStore } from "@/lib/store";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, ScanLine, ArrowRight, Camera, X } from "lucide-react";
+import { Lock, ScanLine, ArrowRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -195,7 +195,15 @@ export default function Entry() {
           <form onSubmit={handleFormSubmit} className="space-y-6">
             <div className="space-y-2">
               <div className="relative group">
-                <ScanLine className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 group-focus-within:text-primary transition-colors" />
+                <button
+                  type="button"
+                  onClick={startScanner}
+                  disabled={isLoading || isScanning}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors cursor-pointer disabled:cursor-not-allowed"
+                  data-testid="button-scan-qr"
+                >
+                  <ScanLine className="w-5 h-5" />
+                </button>
                 <Input
                   type="text"
                   placeholder="أدخل الكود السري..."
@@ -209,40 +217,27 @@ export default function Entry() {
               </div>
             </div>
 
-            <div className="flex gap-3">
-              <Button 
-                type="submit" 
-                className="flex-1 bg-primary hover:bg-primary/90 text-black font-bold py-6 text-lg tracking-wide relative overflow-hidden"
-                disabled={isLoading}
-                data-testid="button-login"
-              >
-                {isLoading ? (
-                  <span className="flex items-center gap-2">
-                    جاري التحقق... <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }} className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full" />
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    تسجيل الدخول <ArrowRight className="w-5 h-5 rotate-180" />
-                  </span>
-                )}
-              </Button>
-              
-              <Button
-                type="button"
-                variant="outline"
-                className="py-6 px-4 border-primary/30 hover:bg-primary/10 hover:border-primary/50"
-                onClick={startScanner}
-                disabled={isLoading || isScanning}
-                data-testid="button-scan-qr"
-              >
-                <Camera className="w-6 h-6 text-primary" />
-              </Button>
-            </div>
+            <Button 
+              type="submit" 
+              className="w-full bg-primary hover:bg-primary/90 text-black font-bold py-6 text-lg tracking-wide relative overflow-hidden"
+              disabled={isLoading}
+              data-testid="button-login"
+            >
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  جاري التحقق... <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }} className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full" />
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  تسجيل الدخول <ArrowRight className="w-5 h-5 rotate-180" />
+                </span>
+              )}
+            </Button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-xs text-muted-foreground">
-              أو امسح رمز QR الخاص بك للدخول السريع
+              اضغط على أيقونة المسح لفتح الكاميرا
             </p>
           </div>
 
