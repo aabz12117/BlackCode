@@ -89,6 +89,43 @@ export async function toggleMission(id: string): Promise<Mission> {
   return res.json();
 }
 
+export async function updateMission(id: string, data: Partial<InsertMission>): Promise<Mission> {
+  const res = await fetch(`/api/missions/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  
+  if (!res.ok) throw new Error("Failed to update mission");
+  return res.json();
+}
+
+export async function deleteMission(id: string): Promise<void> {
+  const res = await fetch(`/api/missions/${id}`, {
+    method: "DELETE",
+  });
+  
+  if (!res.ok) throw new Error("Failed to delete mission");
+}
+
+export async function banUser(id: string): Promise<User> {
+  const res = await fetch(`/api/users/${id}/ban`, {
+    method: "POST",
+  });
+  
+  if (!res.ok) throw new Error("Failed to ban user");
+  return res.json();
+}
+
+export async function unbanUser(id: string): Promise<User> {
+  const res = await fetch(`/api/users/${id}/unban`, {
+    method: "POST",
+  });
+  
+  if (!res.ok) throw new Error("Failed to unban user");
+  return res.json();
+}
+
 // Gameplay
 export async function recordPlay(data: InsertPlay): Promise<Play> {
   const res = await fetch("/api/plays", {

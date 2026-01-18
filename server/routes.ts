@@ -88,6 +88,26 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/users/:id/ban", async (req, res) => {
+    try {
+      const user = await storage.banUser(req.params.id);
+      res.json(user);
+    } catch (error) {
+      console.error("Ban user error:", error);
+      res.status(500).json({ message: "Failed to ban user" });
+    }
+  });
+
+  app.post("/api/users/:id/unban", async (req, res) => {
+    try {
+      const user = await storage.unbanUser(req.params.id);
+      res.json(user);
+    } catch (error) {
+      console.error("Unban user error:", error);
+      res.status(500).json({ message: "Failed to unban user" });
+    }
+  });
+
   // Mission Management
   app.get("/api/missions", async (req, res) => {
     try {
@@ -147,6 +167,16 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Toggle mission error:", error);
       res.status(500).json({ message: "Failed to toggle mission" });
+    }
+  });
+
+  app.delete("/api/missions/:id", async (req, res) => {
+    try {
+      await storage.deleteMission(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete mission error:", error);
+      res.status(500).json({ message: "Failed to delete mission" });
     }
   });
 

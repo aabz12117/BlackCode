@@ -9,6 +9,8 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, data: Partial<InsertUser>): Promise<User>;
   getAllUsers(): Promise<User[]>;
+  banUser(id: string): Promise<User>;
+  unbanUser(id: string): Promise<User>;
   
   // Mission operations
   getMission(id: string): Promise<Mission | undefined>;
@@ -16,6 +18,7 @@ export interface IStorage {
   getActiveMissions(): Promise<Mission[]>;
   createMission(mission: InsertMission): Promise<Mission>;
   updateMission(id: string, data: Partial<InsertMission>): Promise<Mission>;
+  deleteMission(id: string): Promise<void>;
   toggleMission(id: string): Promise<Mission>;
   
   // Play operations
@@ -60,6 +63,24 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(users);
   }
 
+  async banUser(id: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ status: 'banned' })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async unbanUser(id: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ status: 'active' })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
   // Mission operations
   async getMission(id: string): Promise<Mission | undefined> {
     const [mission] = await db.select().from(missions).where(eq(missions.id, id));
@@ -89,6 +110,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(missions.id, id))
       .returning();
     return mission;
+  }
+
+  async deleteMission(id: string): Promise<void> {
+    await db.delete(missions).where(eq(missions.id, id));
   }
 
   async toggleMission(id: string): Promise<Mission> {
