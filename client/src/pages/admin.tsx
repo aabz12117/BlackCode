@@ -39,6 +39,7 @@ export default function Admin() {
     cooldown: 300,
     answer: "",
     repeatable: true,
+    hidden: false,
     hintUrl: "",
     targetUsers: [] as string[]
   });
@@ -51,6 +52,7 @@ export default function Admin() {
     cooldown: 300,
     answer: "",
     repeatable: true,
+    hidden: false,
     hintUrl: "",
     targetUsers: [] as string[]
   });
@@ -231,6 +233,7 @@ export default function Admin() {
         type: newMission.type as 'game' | 'challenge',
         difficulty: newMission.difficulty as 'easy' | 'medium' | 'hard' | 'expert',
         repeatable: newMission.repeatable,
+        hidden: newMission.hidden,
         hintUrl: newMission.hintUrl || null,
         targetUsers: newMissionTargetAll ? null : (newMission.targetUsers.length > 0 ? newMission.targetUsers : null)
       });
@@ -245,6 +248,7 @@ export default function Admin() {
         cooldown: 300,
         answer: "",
         repeatable: true,
+        hidden: false,
         hintUrl: "",
         targetUsers: []
       });
@@ -269,6 +273,7 @@ export default function Admin() {
       cooldown: mission.cooldown,
       answer: mission.answer,
       repeatable: mission.repeatable,
+      hidden: mission.hidden,
       hintUrl: mission.hintUrl || "",
       targetUsers: mission.targetUsers || [],
     });
@@ -291,6 +296,7 @@ export default function Admin() {
           cooldown: Number(editMissionForm.cooldown),
           answer: editMissionForm.answer,
           repeatable: editMissionForm.repeatable,
+          hidden: editMissionForm.hidden,
           hintUrl: editMissionForm.hintUrl || null,
           targetUsers: editMissionTargetAll ? null : (editMissionForm.targetUsers.length > 0 ? editMissionForm.targetUsers : null)
         }
@@ -616,6 +622,20 @@ export default function Admin() {
                       data-testid="switch-new-mission-repeatable"
                     />
                   </div>
+                  <div className="flex items-center justify-between p-3 rounded bg-black/20 border border-white/5">
+                    <div>
+                      <Label className="text-sm">مهمة مخفية</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {newMission.hidden ? 'لا تظهر في قائمة المهام' : 'تظهر في قائمة المهام'}
+                      </p>
+                    </div>
+                    <Switch 
+                      checked={newMission.hidden}
+                      onCheckedChange={(val) => setNewMission({...newMission, hidden: val})}
+                      className="data-[state=checked]:bg-primary"
+                      data-testid="switch-new-mission-hidden"
+                    />
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsNewMissionOpen(false)} data-testid="button-cancel-new-mission">إلغاء</Button>
@@ -855,6 +875,20 @@ export default function Admin() {
                     onCheckedChange={(val) => setEditMissionForm({...editMissionForm, repeatable: val})}
                     className="data-[state=checked]:bg-primary"
                     data-testid="switch-edit-mission-repeatable"
+                  />
+                </div>
+                <div className="flex items-center justify-between p-3 rounded bg-black/20 border border-white/5">
+                  <div>
+                    <Label className="text-sm">مهمة مخفية</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {editMissionForm.hidden ? 'لا تظهر في قائمة المهام' : 'تظهر في قائمة المهام'}
+                    </p>
+                  </div>
+                  <Switch 
+                    checked={editMissionForm.hidden}
+                    onCheckedChange={(val) => setEditMissionForm({...editMissionForm, hidden: val})}
+                    className="data-[state=checked]:bg-primary"
+                    data-testid="switch-edit-mission-hidden"
                   />
                 </div>
               </div>

@@ -63,8 +63,11 @@ export default function Missions() {
     enabled: !!user?.id,
   });
 
-  // Filter missions based on targetUsers - show if no target (for all) or user is in target list
+  // Filter missions based on targetUsers and hidden status
   const filteredMissions = missions.filter(mission => {
+    // Hide hidden missions
+    if (mission.hidden) return false;
+    
     if (!mission.targetUsers || mission.targetUsers.length === 0) {
       return true; // Available for everyone
     }
