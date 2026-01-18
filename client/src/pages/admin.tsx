@@ -1161,9 +1161,13 @@ export default function Admin() {
                   <div className="space-y-2">
                     <Label>النقاط (XP)</Label>
                     <Input 
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       value={editUserForm.points}
-                      onChange={(e) => setEditUserForm({...editUserForm, points: Number(e.target.value)})}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        setEditUserForm({...editUserForm, points: val === '' ? 0 : Number(val)});
+                      }}
                       className="bg-black/20" 
                       data-testid="input-edit-user-points"
                     />
@@ -1171,9 +1175,13 @@ export default function Admin() {
                   <div className="space-y-2">
                     <Label>المستوى</Label>
                     <Input 
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       value={editUserForm.level}
-                      onChange={(e) => setEditUserForm({...editUserForm, level: Number(e.target.value)})}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        setEditUserForm({...editUserForm, level: val === '' ? 1 : Number(val)});
+                      }}
                       className="bg-black/20" 
                       data-testid="input-edit-user-level"
                     />
