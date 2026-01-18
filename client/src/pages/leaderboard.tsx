@@ -1,11 +1,16 @@
 import { useStore } from "@/lib/store";
+import { useQuery } from "@tanstack/react-query";
+import { getLeaderboard as fetchLeaderboard } from "@/lib/api";
 import { motion } from "framer-motion";
 import { Trophy, Medal, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function Leaderboard() {
-  const { getLeaderboard, user: currentUser } = useStore();
-  const users = getLeaderboard();
+  const { user: currentUser } = useStore();
+  const { data: users = [] } = useQuery({
+    queryKey: ["leaderboard"],
+    queryFn: fetchLeaderboard,
+  });
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">

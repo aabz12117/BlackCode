@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useRoute } from "wouter";
 import { useStore } from "@/lib/store";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getMission, recordPlay } from "@/lib/api";
 import { motion } from "framer-motion";
 import { ArrowRight, Terminal, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,14 +11,27 @@ import { Link } from "wouter";
 
 export default function MissionGame() {
   const [, params] = useRoute("/mission/:id");
-  const { missions, addPoints } = useStore();
+  const { user } = useStore();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [gameState, setGameState] = useState<'playing' | 'won' | 'lost'>('playing');
   const [timeLeft, setTimeLeft] = useState(60);
   const [inputCode, setInputCode] = useState("");
   const [sequence, setSequence] = useState<string[]>([]);
   
-  const mission = missions.find(m => m.id === params?.id);
+  const { data: mission } = useQuery({
+    queryKey: ["mission", params?.id],
+    queryFn: () => getMission(params!.id),
+    enabled: !!params?.id,
+  });
+
+  const recordPlayMutation = useMutation({
+    mutationFn: recordPlay,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+  });
 
   // Initialize Game
   useEffect(() => {
@@ -44,10 +59,21 @@ export default function MissionGame() {
 
   if (!mission) return <div>Mission not found</div>;
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
+    if (!user || !mission) return;
+    
     if (inputCode.toUpperCase() === sequence.join("")) {
       setGameState('won');
-      addPoints(mission.points);
+      
+      // Record the play
+      await recordPlayMutation.mutateAsync({
+        userId: user.id,
+        missionId: mission.id,
+        score: mission.points,
+        timeSpent: 60 - timeLeft,
+        completed: true,
+      });
+      
       toast({
         title: "تم إكمال المهمة!",
         description: `تمت إضافة ${mission.points} نقطة لرصيدك.`,

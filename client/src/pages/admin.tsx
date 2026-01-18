@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { useLocation } from "wouter";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getUsers, getMissions, createMission as apiCreateMission, toggleMission as apiToggleMission, createUser } from "@/lib/api";
 import { ShieldAlert, Users, Plus, QrCode, Target, Power, Trash2, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,9 +15,10 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Admin() {
-  const { user, users, missions, toggleMission, addMission } = useStore();
+  const { user } = useStore();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Code Generation State
   const [newCodeName, setNewCodeName] = useState("");
@@ -31,47 +34,103 @@ export default function Admin() {
     cooldown: 300
   });
 
+  // Fetch data
+  const { data: users = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: getUsers,
+  });
+
+  const { data: missions = [] } = useQuery({
+    queryKey: ["missions"],
+    queryFn: () => getMissions(),
+  });
+
   if (user?.role !== 'admin') {
     setLocation("/missions");
     return null;
   }
 
-  const handleGenerateCode = () => {
+  // Mutations
+  const createMissionMutation = useMutation({
+    mutationFn: apiCreateMission,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["missions"] });
+      toast({
+        title: "تم إنشاء المهمة",
+        description: "تمت إضافة المهمة بنجاح.",
+        className: "bg-green-500/20 border-green-500 text-green-500"
+      });
+    },
+  });
+
+  const toggleMissionMutation = useMutation({
+    mutationFn: apiToggleMission,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["missions"] });
+    },
+  });
+
+  const createUserMutation = useMutation({
+    mutationFn: createUser,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+  });
+
+  const handleGenerateCode = async () => {
     const randomCode = Math.random().toString(36).substring(2, 12).toUpperCase();
-    toast({
-      title: "تم توليد الكود بنجاح",
-      description: `الكود الجديد: ${randomCode} للعميل ${newCodeName || "مجهول"}`,
-    });
-    setNewCodeName("");
+    
+    try {
+      await createUserMutation.mutateAsync({
+        code: randomCode,
+        name: newCodeName || "مجهول",
+        points: 0,
+        level: 1,
+        role: "user",
+        status: "active",
+      });
+      
+      toast({
+        title: "تم توليد الكود بنجاح",
+        description: `الكود الجديد: ${randomCode} للعميل ${newCodeName || "مجهول"}`,
+      });
+      setNewCodeName("");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "فشل إنشاء المستخدم",
+        description: error.message,
+      });
+    }
   };
 
-  const handleCreateMission = () => {
-    const mission = {
-      id: `m${Date.now()}`,
-      ...newMission,
-      active: true,
-      points: Number(newMission.points),
-      cooldown: Number(newMission.cooldown),
-      type: newMission.type as 'game' | 'challenge',
-      difficulty: newMission.difficulty as 'easy' | 'medium' | 'hard' | 'expert'
-    };
-    
-    addMission(mission);
-    setIsNewMissionOpen(false);
-    setNewMission({
-      title: "",
-      description: "",
-      points: 100,
-      type: "game",
-      difficulty: "easy",
-      cooldown: 300
-    });
-    
-    toast({
-      title: "تم إنشاء المهمة",
-      description: `تمت إضافة المهمة "${mission.title}" بنجاح.`,
-      className: "bg-green-500/20 border-green-500 text-green-500"
-    });
+  const handleCreateMission = async () => {
+    try {
+      await createMissionMutation.mutateAsync({
+        ...newMission,
+        active: true,
+        points: Number(newMission.points),
+        cooldown: Number(newMission.cooldown),
+        type: newMission.type as 'game' | 'challenge',
+        difficulty: newMission.difficulty as 'easy' | 'medium' | 'hard' | 'expert'
+      });
+      
+      setIsNewMissionOpen(false);
+      setNewMission({
+        title: "",
+        description: "",
+        points: 100,
+        type: "game",
+        difficulty: "easy",
+        cooldown: 300
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "فشل إنشاء المهمة",
+        description: error.message,
+      });
+    }
   };
 
   return (
@@ -261,7 +320,7 @@ export default function Admin() {
                         <Switch 
                           id={`active-${mission.id}`}
                           checked={mission.active}
-                          onCheckedChange={() => toggleMission(mission.id)}
+                          onCheckedChange={() => toggleMissionMutation.mutate(mission.id)}
                           className="data-[state=checked]:bg-primary"
                         />
                       </div>

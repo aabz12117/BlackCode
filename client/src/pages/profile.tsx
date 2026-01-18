@@ -1,10 +1,16 @@
 import { useStore } from "@/lib/store";
+import { useQuery } from "@tanstack/react-query";
+import { getMissions } from "@/lib/api";
 import { User, Shield, Trophy, Activity, History, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
 export default function Profile() {
-  const { user, missions } = useStore();
+  const { user } = useStore();
+  const { data: missions = [] } = useQuery({
+    queryKey: ["missions"],
+    queryFn: () => getMissions(),
+  });
 
   if (!user) return null;
 

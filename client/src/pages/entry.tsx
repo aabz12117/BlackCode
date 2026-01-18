@@ -6,13 +6,14 @@ import { Lock, ScanLine, AlertCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { login as apiLogin } from "@/lib/api";
 import loginBg from "@assets/generated_images/cyberpunk_digital_security_interface_background.png";
 
 export default function Entry() {
   const [code, setCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [, setLocation] = useLocation();
-  const { login } = useStore();
+  const { setUser } = useStore();
   const { toast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -21,26 +22,24 @@ export default function Entry() {
     
     setIsLoading(true);
     
-    // Simulate network delay for effect
-    setTimeout(() => {
-      const success = login(code);
+    try {
+      const { user } = await apiLogin(code);
+      setUser(user);
       
-      if (success) {
-        toast({
-          title: "تم التحقق من الوصول",
-          description: "مرحباً بك في النظام، أيها العميل.",
-          className: "bg-primary/20 border-primary text-primary-foreground"
-        });
-        setLocation("/missions");
-      } else {
-        toast({
-          variant: "destructive",
-          title: "فشل الدخول",
-          description: "الكود غير صحيح أو غير نشط.",
-        });
-        setIsLoading(false);
-      }
-    }, 1500);
+      toast({
+        title: "تم التحقق من الوصول",
+        description: "مرحباً بك في النظام، أيها العميل.",
+        className: "bg-primary/20 border-primary text-primary-foreground"
+      });
+      setLocation("/missions");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "فشل الدخول",
+        description: error.message || "الكود غير صحيح أو غير نشط.",
+      });
+      setIsLoading(false);
+    }
   };
 
   return (

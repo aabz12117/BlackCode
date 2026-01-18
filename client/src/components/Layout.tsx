@@ -40,8 +40,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           {navItems.map((item) => (
             <Link key={item.href} href={item.href}>
-              <a className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-md transition-all duration-300 group relative overflow-hidden",
+              <div className={cn(
+                "flex items-center gap-3 px-4 py-3 rounded-md transition-all duration-300 group relative overflow-hidden cursor-pointer",
                 location === item.href 
                   ? "bg-primary/10 text-primary border-r-2 border-primary" 
                   : "text-muted-foreground hover:text-foreground hover:bg-white/5"
@@ -51,7 +51,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 {location === item.href && (
                   <div className="absolute inset-0 bg-primary/5 blur-xl -z-10" />
                 )}
-              </a>
+              </div>
             </Link>
           ))}
         </nav>

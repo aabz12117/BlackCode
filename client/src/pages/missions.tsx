@@ -1,4 +1,7 @@
-import { useStore, Mission } from "@/lib/store";
+import { useStore } from "@/lib/store";
+import type { Mission } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
+import { getMissions } from "@/lib/api";
 import { motion } from "framer-motion";
 import { Gamepad2, AlertTriangle, Clock, Lock, Star, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -20,7 +23,11 @@ const item = {
 };
 
 export default function Missions() {
-  const { missions, user } = useStore();
+  const { user } = useStore();
+  const { data: missions = [], isLoading } = useQuery({
+    queryKey: ["missions"],
+    queryFn: () => getMissions(),
+  });
 
   return (
     <div className="space-y-8">
