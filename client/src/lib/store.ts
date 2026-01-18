@@ -79,6 +79,8 @@ interface AppState {
   logout: () => void;
   addPoints: (points: number) => void;
   getLeaderboard: () => User[];
+  toggleMission: (id: string) => void;
+  addMission: (mission: Mission) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -113,6 +115,24 @@ export const useStore = create<AppState>((set, get) => ({
   },
   
   getLeaderboard: () => {
-    return [...get().users].sort((a: User, b: User) => b.points - a.points);
+    // Filter out admins from leaderboard
+    return [...get().users]
+      .filter((u: User) => u.role !== 'admin')
+      .sort((a: User, b: User) => b.points - a.points);
+  },
+  
+  // Admin actions
+  toggleMission: (id: string) => {
+    set((state: AppState) => ({
+      missions: state.missions.map(m => 
+        m.id === id ? { ...m, active: !m.active } : m
+      )
+    }));
+  },
+
+  addMission: (mission: Mission) => {
+    set((state: AppState) => ({
+      missions: [...state.missions, mission]
+    }));
   }
 }));

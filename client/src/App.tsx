@@ -7,6 +7,7 @@ import Layout from "@/components/Layout";
 import Entry from "@/pages/entry";
 import Missions from "@/pages/missions";
 import Leaderboard from "@/pages/leaderboard";
+import Profile from "@/pages/profile";
 import Admin from "@/pages/admin"; // We'll create this next
 import MissionGame from "@/pages/mission-game"; // We'll create this next
 import { useStore } from "@/lib/store";
@@ -38,12 +39,7 @@ function Router() {
             <Route path="/mission/:id" component={MissionGame} />
             <Route path="/leaderboard" component={Leaderboard} />
             <Route path="/admin" component={Admin} />
-            <Route path="/profile">
-               {/* Simple Profile Placeholder */}
-               <div className="p-8 text-center text-muted-foreground font-mono">
-                 جاري بناء صفحة الملف الشخصي...
-               </div>
-            </Route>
+            <Route path="/profile" component={Profile} />
             <Route component={NotFound} />
           </Switch>
         </Layout>
