@@ -1,6 +1,6 @@
 import { users, missions, plays, type User, type InsertUser, type Mission, type InsertMission, type Play, type InsertPlay } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -180,7 +180,7 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(users)
-      .where(eq(users.role, 'user'))
+      .where(and(eq(users.role, 'user'), eq(users.status, 'active')))
       .orderBy(desc(users.points));
   }
 }
