@@ -51,46 +51,69 @@ export default function Entry() {
     await handleLogin();
   };
 
-  const startScanner = async () => {
+  const startScanner = () => {
     setIsScanning(true);
-    
-    try {
-      const scanner = new Html5Qrcode("qr-reader");
-      scannerRef.current = scanner;
-      
-      await scanner.start(
-        { facingMode: "environment" },
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-        },
-        async (decodedText) => {
-          // QR code scanned successfully
-          await stopScanner();
-          setCode(decodedText.toUpperCase());
-          
-          // Auto-login with scanned code
-          toast({
-            title: "تم مسح الكود",
-            description: `جاري التحقق من الكود: ${decodedText.toUpperCase()}`,
-          });
-          
-          await handleLogin(decodedText.toUpperCase());
-        },
-        () => {
-          // QR code not found - ignore
-        }
-      );
-    } catch (error: any) {
-      console.error("Scanner error:", error);
-      toast({
-        variant: "destructive",
-        title: "خطأ في الكاميرا",
-        description: "تعذر فتح الكاميرا. تأكد من السماح بالوصول للكاميرا.",
-      });
-      setIsScanning(false);
-    }
   };
+  
+  // Start camera after modal is rendered
+  useEffect(() => {
+    if (!isScanning) return;
+    
+    const initScanner = async () => {
+      // Wait for DOM element to be ready
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const element = document.getElementById("qr-reader");
+      if (!element) {
+        toast({
+          variant: "destructive",
+          title: "خطأ",
+          description: "تعذر تحميل الماسح الضوئي.",
+        });
+        setIsScanning(false);
+        return;
+      }
+      
+      try {
+        const scanner = new Html5Qrcode("qr-reader");
+        scannerRef.current = scanner;
+        
+        await scanner.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+          },
+          async (decodedText) => {
+            // QR code scanned successfully
+            await stopScanner();
+            setCode(decodedText.toUpperCase());
+            
+            // Auto-login with scanned code
+            toast({
+              title: "تم مسح الكود",
+              description: `جاري التحقق من الكود: ${decodedText.toUpperCase()}`,
+            });
+            
+            await handleLogin(decodedText.toUpperCase());
+          },
+          () => {
+            // QR code not found - ignore
+          }
+        );
+      } catch (error: any) {
+        console.error("Scanner error:", error);
+        toast({
+          variant: "destructive",
+          title: "خطأ في الكاميرا",
+          description: "تعذر فتح الكاميرا. تأكد من السماح بالوصول للكاميرا.",
+        });
+        setIsScanning(false);
+      }
+    };
+    
+    initScanner();
+  }, [isScanning]);
 
   const stopScanner = async () => {
     if (scannerRef.current) {
