@@ -373,9 +373,14 @@ export default function Admin() {
                     <div className="space-y-2">
                       <Label>النقاط</Label>
                       <Input 
-                        type="number" 
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         value={newMission.points}
-                        onChange={(e) => setNewMission({...newMission, points: Number(e.target.value)})}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9]/g, '');
+                          setNewMission({...newMission, points: val === '' ? 0 : parseInt(val, 10)});
+                        }}
                         className="bg-black/20" 
                         data-testid="input-new-mission-points"
                       />
@@ -383,9 +388,14 @@ export default function Admin() {
                     <div className="space-y-2">
                       <Label>وقت الانتظار (ثانية)</Label>
                       <Input 
-                        type="number" 
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         value={newMission.cooldown}
-                        onChange={(e) => setNewMission({...newMission, cooldown: Number(e.target.value)})}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9]/g, '');
+                          setNewMission({...newMission, cooldown: val === '' ? 0 : parseInt(val, 10)});
+                        }}
                         className="bg-black/20" 
                         data-testid="input-new-mission-cooldown"
                       />
@@ -532,9 +542,14 @@ export default function Admin() {
                   <div className="space-y-2">
                     <Label>النقاط</Label>
                     <Input 
-                      type="number" 
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={editMissionForm.points}
-                      onChange={(e) => setEditMissionForm({...editMissionForm, points: Number(e.target.value)})}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        setEditMissionForm({...editMissionForm, points: val === '' ? 0 : parseInt(val, 10)});
+                      }}
                       className="bg-black/20" 
                       data-testid="input-edit-mission-points"
                     />
@@ -542,9 +557,14 @@ export default function Admin() {
                   <div className="space-y-2">
                     <Label>وقت الانتظار (ثانية)</Label>
                     <Input 
-                      type="number" 
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={editMissionForm.cooldown}
-                      onChange={(e) => setEditMissionForm({...editMissionForm, cooldown: Number(e.target.value)})}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        setEditMissionForm({...editMissionForm, cooldown: val === '' ? 0 : parseInt(val, 10)});
+                      }}
                       className="bg-black/20" 
                       data-testid="input-edit-mission-cooldown"
                     />
