@@ -136,27 +136,28 @@ export default function Admin() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-3xl font-display font-bold text-destructive">لوحة التحكم</h2>
-          <p className="text-muted-foreground font-mono">منطقة محظورة - للمشرفين فقط</p>
+          <h2 className="text-2xl md:text-3xl font-display font-bold text-destructive">لوحة التحكم</h2>
+          <p className="text-muted-foreground font-mono text-xs md:text-sm">منطقة محظورة - للمشرفين فقط</p>
         </div>
-        <div className="px-4 py-2 bg-destructive/10 text-destructive border border-destructive/20 rounded font-mono text-sm flex items-center gap-2">
-          <ShieldAlert className="w-4 h-4" />
-          ADMIN ACCESS GRANTED
+        <div className="px-3 py-1.5 md:px-4 md:py-2 bg-destructive/10 text-destructive border border-destructive/20 rounded font-mono text-xs md:text-sm flex items-center gap-2 w-fit">
+          <ShieldAlert className="w-3 h-3 md:w-4 md:h-4" />
+          <span className="hidden sm:inline">ADMIN ACCESS GRANTED</span>
+          <span className="sm:hidden">ADMIN</span>
         </div>
       </div>
 
       <Tabs defaultValue="codes" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-card border border-white/5">
-          <TabsTrigger value="codes">إدارة الأكواد</TabsTrigger>
-          <TabsTrigger value="missions">المهام</TabsTrigger>
-          <TabsTrigger value="users">المستخدمين</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 bg-card border border-white/5 text-xs md:text-sm">
+          <TabsTrigger value="codes" className="text-xs md:text-sm">الأكواد</TabsTrigger>
+          <TabsTrigger value="missions" className="text-xs md:text-sm">المهام</TabsTrigger>
+          <TabsTrigger value="users" className="text-xs md:text-sm">المستخدمين</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="codes" className="space-y-4 mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <TabsContent value="codes" className="space-y-4 mt-4 md:mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             <Card className="bg-card/50 border-white/10">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -306,41 +307,39 @@ export default function Admin() {
             <CardContent className="p-0">
               <div className="divide-y divide-white/5">
                 {missions.map(mission => (
-                  <div key={mission.id} className="flex items-center justify-between p-4 hover:bg-white/5 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className={`p-2 rounded bg-white/5 ${mission.active ? 'text-primary' : 'text-muted-foreground'}`}>
-                        <Target className="w-5 h-5" />
+                  <div key={mission.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 md:p-4 hover:bg-white/5 transition-colors gap-3">
+                    <div className="flex items-center gap-3 md:gap-4">
+                      <div className={`p-1.5 md:p-2 rounded bg-white/5 ${mission.active ? 'text-primary' : 'text-muted-foreground'}`}>
+                        <Target className="w-4 h-4 md:w-5 md:h-5" />
                       </div>
                       <div>
-                        <h4 className={`font-bold ${!mission.active && 'text-muted-foreground line-through'}`}>{mission.title}</h4>
-                        <div className="flex gap-2 text-xs text-muted-foreground font-mono mt-1">
+                        <h4 className={`font-bold text-sm md:text-base ${!mission.active && 'text-muted-foreground line-through'}`}>{mission.title}</h4>
+                        <div className="flex gap-2 text-[10px] md:text-xs text-muted-foreground font-mono mt-0.5 md:mt-1">
                           <span className="uppercase">{mission.difficulty}</span>
                           <span>•</span>
                           <span>{mission.points} XP</span>
-                          <span>•</span>
-                          <span>{mission.type}</span>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 md:gap-4 mr-auto sm:mr-0">
                       <div className="flex items-center gap-2">
-                        <Label htmlFor={`active-${mission.id}`} className="text-xs text-muted-foreground cursor-pointer">
+                        <Label htmlFor={`active-${mission.id}`} className="text-[10px] md:text-xs text-muted-foreground cursor-pointer">
                           {mission.active ? 'نشط' : 'معطل'}
                         </Label>
                         <Switch 
                           id={`active-${mission.id}`}
                           checked={mission.active}
                           onCheckedChange={() => toggleMissionMutation.mutate(mission.id)}
-                          className="data-[state=checked]:bg-primary"
+                          className="data-[state=checked]:bg-primary scale-90 md:scale-100"
                         />
                       </div>
-                      <div className="flex gap-1 border-l border-white/10 pr-4">
-                         <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-white">
-                           <Edit className="w-4 h-4" />
+                      <div className="flex gap-1 border-l border-white/10 pr-2 md:pr-4">
+                         <Button size="icon" variant="ghost" className="h-7 w-7 md:h-8 md:w-8 text-muted-foreground hover:text-white">
+                           <Edit className="w-3.5 h-3.5 md:w-4 md:h-4" />
                          </Button>
-                         <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10">
-                           <Trash2 className="w-4 h-4" />
+                         <Button size="icon" variant="ghost" className="h-7 w-7 md:h-8 md:w-8 text-destructive hover:bg-destructive/10">
+                           <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
                          </Button>
                       </div>
                     </div>

@@ -69,42 +69,42 @@ export default function Profile() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-4 md:space-y-8">
       {/* Header / ID Card */}
-      <div className="relative overflow-hidden rounded-2xl bg-card border border-primary/20 p-8">
-        <div className="absolute top-0 right-0 p-4 opacity-10">
+      <div className="relative overflow-hidden rounded-xl md:rounded-2xl bg-card border border-primary/20 p-4 md:p-8">
+        <div className="absolute top-0 right-0 p-4 opacity-10 hidden md:block">
           <User className="w-64 h-64 text-primary" />
         </div>
         
-        <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center md:items-start">
-          <div className="w-32 h-32 rounded-full border-4 border-primary/20 bg-black/40 flex items-center justify-center shrink-0">
-             <User className="w-16 h-16 text-primary" />
+        <div className="relative z-10 flex flex-col items-center gap-4 md:flex-row md:gap-8 md:items-start">
+          <div className="w-20 h-20 md:w-32 md:h-32 rounded-full border-4 border-primary/20 bg-black/40 flex items-center justify-center shrink-0">
+             <User className="w-10 h-10 md:w-16 md:h-16 text-primary" />
           </div>
           
           <div className="text-center md:text-right space-y-2 flex-1">
-            <div className="flex items-center justify-center md:justify-start gap-3">
-              <h1 className="text-3xl font-display font-bold">{user.name}</h1>
-              <span className="px-2 py-1 rounded text-xs font-mono bg-primary/20 text-primary border border-primary/20">
+            <div className="flex flex-col md:flex-row items-center justify-center md:justify-start gap-2 md:gap-3">
+              <h1 className="text-xl md:text-3xl font-display font-bold">{user.name}</h1>
+              <span className="px-2 py-1 rounded text-[10px] md:text-xs font-mono bg-primary/20 text-primary border border-primary/20">
                 {user.role === 'admin' ? 'مشرف النظام' : 'عميل ميداني'}
               </span>
             </div>
-            <p className="font-mono text-xl text-muted-foreground tracking-widest">{user.code}</p>
+            <p className="font-mono text-base md:text-xl text-muted-foreground tracking-widest">{user.code}</p>
             
-            <div className="flex flex-wrap gap-4 justify-center md:justify-start mt-4">
-              <div className="bg-white/5 px-4 py-2 rounded border border-white/5 flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-yellow-500" />
-                <span className="font-mono font-bold text-yellow-500" data-testid="text-user-points">{user.points} XP</span>
+            <div className="flex flex-wrap gap-2 md:gap-4 justify-center md:justify-start mt-3 md:mt-4">
+              <div className="bg-white/5 px-3 py-1.5 md:px-4 md:py-2 rounded border border-white/5 flex items-center gap-2">
+                <Trophy className="w-3 h-3 md:w-4 md:h-4 text-yellow-500" />
+                <span className="font-mono font-bold text-xs md:text-base text-yellow-500" data-testid="text-user-points">{user.points} XP</span>
               </div>
-              <div className="bg-white/5 px-4 py-2 rounded border border-white/5 flex items-center gap-2">
-                <Shield className="w-4 h-4 text-primary" />
-                <span className="font-mono font-bold text-primary" data-testid="text-user-level">المستوى {user.level}</span>
+              <div className="bg-white/5 px-3 py-1.5 md:px-4 md:py-2 rounded border border-white/5 flex items-center gap-2">
+                <Shield className="w-3 h-3 md:w-4 md:h-4 text-primary" />
+                <span className="font-mono font-bold text-xs md:text-base text-primary" data-testid="text-user-level">المستوى {user.level}</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         {/* Stats */}
         <Card className="bg-card/50 border-white/10">
           <CardHeader>
@@ -122,24 +122,24 @@ export default function Profile() {
               <Progress value={Math.min(progress, 100)} className="h-2 bg-white/5" />
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="p-4 rounded bg-white/5 border border-white/5 text-center">
-                <div className="text-2xl font-bold font-mono text-foreground" data-testid="text-active-missions">
+            <div className="grid grid-cols-3 gap-2 md:gap-4">
+              <div className="p-2 md:p-4 rounded bg-white/5 border border-white/5 text-center">
+                <div className="text-lg md:text-2xl font-bold font-mono text-foreground" data-testid="text-active-missions">
                   {missions.filter(m => m.active).length}
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">مهام نشطة</div>
+                <div className="text-[10px] md:text-xs text-muted-foreground mt-1">مهام نشطة</div>
               </div>
-              <div className="p-4 rounded bg-white/5 border border-white/5 text-center">
-                <div className="text-2xl font-bold font-mono text-green-500" data-testid="text-completed-missions">
+              <div className="p-2 md:p-4 rounded bg-white/5 border border-white/5 text-center">
+                <div className="text-lg md:text-2xl font-bold font-mono text-green-500" data-testid="text-completed-missions">
                   {completedMissions}
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">مهام مكتملة</div>
+                <div className="text-[10px] md:text-xs text-muted-foreground mt-1">مهام مكتملة</div>
               </div>
-              <div className="p-4 rounded bg-white/5 border border-white/5 text-center">
-                <div className="text-2xl font-bold font-mono text-yellow-500" data-testid="text-total-earned">
+              <div className="p-2 md:p-4 rounded bg-white/5 border border-white/5 text-center">
+                <div className="text-lg md:text-2xl font-bold font-mono text-yellow-500" data-testid="text-total-earned">
                   {totalPoints}
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">نقاط مكتسبة</div>
+                <div className="text-[10px] md:text-xs text-muted-foreground mt-1">نقاط مكتسبة</div>
               </div>
             </div>
           </CardContent>

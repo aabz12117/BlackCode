@@ -195,23 +195,23 @@ export default function Entry() {
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="relative z-20 w-full max-w-md p-8 m-4"
+        className="relative z-20 w-full max-w-md px-4 py-6 md:p-8 m-2 md:m-4"
       >
-        <div className="bg-card/60 backdrop-blur-xl border border-primary/20 rounded-xl p-8 shadow-2xl relative overflow-hidden group">
+        <div className="bg-card/60 backdrop-blur-xl border border-primary/20 rounded-xl p-5 md:p-8 shadow-2xl relative overflow-hidden group">
           {/* Animated Border Line */}
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
           
-          <div className="flex flex-col items-center mb-8 text-center">
-            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 border border-primary/30 relative">
+          <div className="flex flex-col items-center mb-6 md:mb-8 text-center">
+            <div className="w-16 h-16 md:w-20 md:h-20 bg-primary/10 rounded-full flex items-center justify-center mb-4 md:mb-6 border border-primary/30 relative">
               <motion.div 
                 animate={{ rotate: 360 }}
                 transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
                 className="absolute inset-0 border-t-2 border-primary rounded-full opacity-50"
               />
-              <Lock className="w-8 h-8 text-primary" />
+              <Lock className="w-6 h-6 md:w-8 md:h-8 text-primary" />
             </div>
             
-            <h1 className="text-3xl font-display font-bold text-white mb-2 tracking-wider glitch-effect" data-text="نظام الوصول الآمن">نظام الوصول الآمن</h1>
+            <h1 className="text-2xl md:text-3xl font-display font-bold text-white mb-2 tracking-wider glitch-effect" data-text="نظام الوصول الآمن">نظام الوصول الآمن</h1>
             <p className="text-muted-foreground text-sm font-mono">الرجاء إدخال بيانات التصريح للمتابعة</p>
           </div>
 

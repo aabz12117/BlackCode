@@ -98,6 +98,9 @@
   .box-glow {
     box-shadow: 0 0 20px -5px currentColor;
   }
+  .safe-area-pb {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
   .scanline {
     background: linear-gradient(
       to bottom,
