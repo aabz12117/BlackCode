@@ -326,5 +326,96 @@ export async function registerRoutes(
     }
   });
 
+  // Owner-only: Full user management
+  app.patch("/api/users/:id/full", async (req, res) => {
+    try {
+      const requesterId = req.headers['x-requester-id'] as string;
+      if (!requesterId) {
+        return res.status(401).json({ message: "غير مصرح - معرف المستخدم مطلوب" });
+      }
+      
+      const requester = await storage.getUser(requesterId);
+      if (!requester || requester.role !== 'owner') {
+        return res.status(403).json({ message: "فقط المالك يستطيع تعديل بيانات المستخدمين" });
+      }
+
+      const { name, code, points, level } = req.body;
+      const updateData: { name?: string; code?: string; points?: number; level?: number } = {};
+      
+      if (name !== undefined) updateData.name = name;
+      if (code !== undefined) updateData.code = code.toUpperCase();
+      if (points !== undefined) updateData.points = Number(points);
+      if (level !== undefined) updateData.level = Number(level);
+
+      const user = await storage.updateUserFull(req.params.id, updateData);
+      res.json(user);
+    } catch (error: any) {
+      console.error("Full update user error:", error);
+      if (error.message?.includes("duplicate") || error.code === '23505') {
+        return res.status(409).json({ message: "هذا الكود مستخدم من قبل مستخدم آخر" });
+      }
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  // Owner-only: Add play for user
+  app.post("/api/users/:userId/plays", async (req, res) => {
+    try {
+      const requesterId = req.headers['x-requester-id'] as string;
+      if (!requesterId) {
+        return res.status(401).json({ message: "غير مصرح - معرف المستخدم مطلوب" });
+      }
+      
+      const requester = await storage.getUser(requesterId);
+      if (!requester || requester.role !== 'owner') {
+        return res.status(403).json({ message: "فقط المالك يستطيع إضافة إنجازات للمستخدمين" });
+      }
+
+      const { missionId, completed, score } = req.body;
+      const play = await storage.addPlayForUser(
+        req.params.userId,
+        missionId,
+        completed ?? true,
+        score ?? 0
+      );
+
+      // Update user points if completed
+      if (completed && score > 0) {
+        const user = await storage.getUser(req.params.userId);
+        if (user) {
+          const newPoints = user.points + score;
+          const newLevel = Math.floor(newPoints / 200) + 1;
+          await storage.updateUser(user.id, { points: newPoints, level: newLevel });
+        }
+      }
+
+      res.status(201).json(play);
+    } catch (error) {
+      console.error("Add play error:", error);
+      res.status(500).json({ message: "Failed to add play" });
+    }
+  });
+
+  // Owner-only: Delete play
+  app.delete("/api/plays/:id", async (req, res) => {
+    try {
+      const requesterId = req.headers['x-requester-id'] as string;
+      if (!requesterId) {
+        return res.status(401).json({ message: "غير مصرح - معرف المستخدم مطلوب" });
+      }
+      
+      const requester = await storage.getUser(requesterId);
+      if (!requester || requester.role !== 'owner') {
+        return res.status(403).json({ message: "فقط المالك يستطيع حذف إنجازات المستخدمين" });
+      }
+
+      await storage.deletePlay(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete play error:", error);
+      res.status(500).json({ message: "Failed to delete play" });
+    }
+  });
+
   return httpServer;
 }

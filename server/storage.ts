@@ -8,6 +8,7 @@ export interface IStorage {
   getUserByCode(code: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, data: Partial<InsertUser>): Promise<User>;
+  updateUserFull(id: string, data: { name?: string; code?: string; points?: number; level?: number }): Promise<User>;
   getAllUsers(): Promise<User[]>;
   banUser(id: string): Promise<User>;
   unbanUser(id: string): Promise<User>;
@@ -25,6 +26,8 @@ export interface IStorage {
   createPlay(play: InsertPlay): Promise<Play>;
   getUserPlays(userId: string): Promise<Play[]>;
   getMissionPlays(missionId: string): Promise<Play[]>;
+  deletePlay(id: string): Promise<void>;
+  addPlayForUser(userId: string, missionId: string, completed: boolean, score: number): Promise<Play>;
   
   // Leaderboard
   getLeaderboard(): Promise<User[]>;
@@ -51,6 +54,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUser(id: string, data: Partial<InsertUser>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set(data)
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async updateUserFull(id: string, data: { name?: string; code?: string; points?: number; level?: number }): Promise<User> {
     const [user] = await db
       .update(users)
       .set(data)
@@ -143,6 +155,24 @@ export class DatabaseStorage implements IStorage {
 
   async getMissionPlays(missionId: string): Promise<Play[]> {
     return await db.select().from(plays).where(eq(plays.missionId, missionId));
+  }
+
+  async deletePlay(id: string): Promise<void> {
+    await db.delete(plays).where(eq(plays.id, id));
+  }
+
+  async addPlayForUser(userId: string, missionId: string, completed: boolean, score: number): Promise<Play> {
+    const [play] = await db
+      .insert(plays)
+      .values({
+        userId,
+        missionId,
+        completed,
+        score,
+        timestamp: new Date(),
+      })
+      .returning();
+    return play;
   }
 
   // Leaderboard

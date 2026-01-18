@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { useStore } from "@/lib/store";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getUsers, getMissions, createMission as apiCreateMission, toggleMission as apiToggleMission, createUser, updateMission as apiUpdateMission, deleteMission as apiDeleteMission, banUser as apiBanUser, unbanUser as apiUnbanUser } from "@/lib/api";
-import { ShieldAlert, Users, Plus, QrCode, Target, Trash2, Edit, Ban, UserCheck } from "lucide-react";
+import { getUsers, getMissions, createMission as apiCreateMission, toggleMission as apiToggleMission, createUser, updateMission as apiUpdateMission, deleteMission as apiDeleteMission, banUser as apiBanUser, unbanUser as apiUnbanUser, getUserPlays, updateUserFull, addPlayForUser, deletePlay as apiDeletePlay } from "@/lib/api";
+import { ShieldAlert, Users, Plus, QrCode, Target, Trash2, Edit, Ban, UserCheck, Settings, CheckCircle2, XCircle, History } from "lucide-react";
+import type { User, Play } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -43,6 +44,13 @@ export default function Admin() {
     hintUrl: "",
     targetUsers: [] as string[]
   });
+  
+  // Owner-only user edit state
+  const [isEditUserOpen, setIsEditUserOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editUserForm, setEditUserForm] = useState({ name: "", code: "", points: 0, level: 1 });
+  const [editingUserPlays, setEditingUserPlays] = useState<Play[]>([]);
+  const [addPlayMissionId, setAddPlayMissionId] = useState<string>("");
   const [newMission, setNewMission] = useState({
     title: "",
     description: "",
@@ -146,6 +154,51 @@ export default function Admin() {
         title: "تم رفع الحظر",
         description: "يمكن للمستخدم الدخول الآن.",
         className: "bg-green-500/20 border-green-500 text-green-500"
+      });
+    },
+  });
+
+  // Owner-only mutations for full user management
+  const updateUserFullMutation = useMutation({
+    mutationFn: (data: { id: string; name?: string; code?: string; points?: number; level?: number }) => 
+      updateUserFull(data.id, { name: data.name, code: data.code, points: data.points, level: data.level }, user!.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast({
+        title: "تم تحديث المستخدم",
+        description: "تم حفظ البيانات بنجاح.",
+        className: "bg-green-500/20 border-green-500 text-green-500"
+      });
+    },
+  });
+
+  const addPlayMutation = useMutation({
+    mutationFn: (data: { userId: string; missionId: string; score: number }) => 
+      addPlayForUser(data.userId, data.missionId, true, data.score, user!.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      if (editingUser) {
+        getUserPlays(editingUser.id).then(setEditingUserPlays);
+      }
+      toast({
+        title: "تم إضافة الإنجاز",
+        description: "تم تسجيل إكمال المهمة للمستخدم.",
+        className: "bg-green-500/20 border-green-500 text-green-500"
+      });
+    },
+  });
+
+  const deletePlayMutation = useMutation({
+    mutationFn: (playId: string) => apiDeletePlay(playId, user!.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      if (editingUser) {
+        getUserPlays(editingUser.id).then(setEditingUserPlays);
+      }
+      toast({
+        title: "تم حذف الإنجاز",
+        description: "تمت إزالة سجل المهمة.",
+        className: "bg-red-500/20 border-red-500 text-red-500"
       });
     },
   });
@@ -347,6 +400,77 @@ export default function Admin() {
         title: "فشل رفع الحظر",
         description: error.message,
       });
+    }
+  };
+
+  // Owner-only: Edit user handler
+  const handleEditUser = async (targetUser: User) => {
+    setEditingUser(targetUser);
+    setEditUserForm({
+      name: targetUser.name,
+      code: targetUser.code,
+      points: targetUser.points,
+      level: targetUser.level
+    });
+    const plays = await getUserPlays(targetUser.id);
+    setEditingUserPlays(plays);
+    setAddPlayMissionId("");
+    setIsEditUserOpen(true);
+  };
+
+  const handleSaveUserEdit = async () => {
+    if (!editingUser) return;
+    try {
+      await updateUserFullMutation.mutateAsync({
+        id: editingUser.id,
+        name: editUserForm.name,
+        code: editUserForm.code,
+        points: editUserForm.points,
+        level: editUserForm.level
+      });
+      setIsEditUserOpen(false);
+      setEditingUser(null);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "فشل تحديث المستخدم",
+        description: error.message,
+      });
+    }
+  };
+
+  const handleAddPlay = async () => {
+    if (!editingUser || !addPlayMissionId) return;
+    const mission = missions.find(m => m.id === addPlayMissionId);
+    if (!mission) return;
+    
+    try {
+      await addPlayMutation.mutateAsync({
+        userId: editingUser.id,
+        missionId: addPlayMissionId,
+        score: mission.points
+      });
+      setAddPlayMissionId("");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "فشل إضافة الإنجاز",
+        description: error.message,
+      });
+    }
+  };
+
+  const handleDeletePlay = async (playId: string) => {
+    if (confirm("هل أنت متأكد من حذف هذا الإنجاز؟")) {
+      try {
+        await deletePlayMutation.mutateAsync(playId);
+      } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: "فشل حذف الإنجاز",
+          description: error.message,
+        });
+      }
     }
   };
 
@@ -957,6 +1081,18 @@ export default function Admin() {
                           <span className="text-xs md:text-sm font-mono text-primary block">LVL {u.level}</span>
                           <span className="text-[10px] md:text-xs font-mono text-yellow-500">{u.points} XP</span>
                         </div>
+                        {isOwner && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-7 text-xs gap-1 text-muted-foreground hover:text-white"
+                            onClick={() => handleEditUser(u)}
+                            data-testid={`button-edit-user-${u.id}`}
+                          >
+                            <Settings className="w-3 h-3" />
+                            إدارة
+                          </Button>
+                        )}
                         {showBanButtons && (
                           u.status === 'active' ? (
                             <Button 
@@ -989,6 +1125,131 @@ export default function Admin() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Owner-only: Edit User Dialog */}
+          <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
+            <DialogContent className="bg-card border-white/10 text-foreground max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-primary" />
+                  إدارة المستخدم: {editingUser?.name}
+                </DialogTitle>
+                <DialogDescription>تعديل بيانات المستخدم وإدارة إنجازاته.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>الاسم</Label>
+                    <Input 
+                      value={editUserForm.name}
+                      onChange={(e) => setEditUserForm({...editUserForm, name: e.target.value})}
+                      className="bg-black/20" 
+                      data-testid="input-edit-user-name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>الكود السري</Label>
+                    <Input 
+                      value={editUserForm.code}
+                      onChange={(e) => setEditUserForm({...editUserForm, code: e.target.value.toUpperCase()})}
+                      className="bg-black/20 font-mono" 
+                      data-testid="input-edit-user-code"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>النقاط (XP)</Label>
+                    <Input 
+                      type="number"
+                      value={editUserForm.points}
+                      onChange={(e) => setEditUserForm({...editUserForm, points: Number(e.target.value)})}
+                      className="bg-black/20" 
+                      data-testid="input-edit-user-points"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>المستوى</Label>
+                    <Input 
+                      type="number"
+                      value={editUserForm.level}
+                      onChange={(e) => setEditUserForm({...editUserForm, level: Number(e.target.value)})}
+                      className="bg-black/20" 
+                      data-testid="input-edit-user-level"
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t border-white/10 pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <History className="w-4 h-4 text-muted-foreground" />
+                      <Label className="text-sm font-bold">سجل الإنجازات ({editingUserPlays.filter(p => p.completed).length} مهمة مكتملة)</Label>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2 max-h-40 overflow-y-auto mb-4">
+                    {editingUserPlays.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-4">لا توجد إنجازات</p>
+                    ) : (
+                      editingUserPlays.map(play => {
+                        const mission = missions.find(m => m.id === play.missionId);
+                        return (
+                          <div key={play.id} className="flex items-center justify-between p-2 bg-black/20 rounded border border-white/5">
+                            <div className="flex items-center gap-2">
+                              {play.completed ? (
+                                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                              ) : (
+                                <XCircle className="w-4 h-4 text-red-500" />
+                              )}
+                              <span className="text-sm">{mission?.title || 'مهمة غير معروفة'}</span>
+                              {play.completed && play.score > 0 && (
+                                <span className="text-xs text-yellow-500">+{play.score} XP</span>
+                              )}
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-6 w-6 p-0 text-destructive hover:bg-destructive/10"
+                              onClick={() => handleDeletePlay(play.id)}
+                              data-testid={`button-delete-play-${play.id}`}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Select value={addPlayMissionId} onValueChange={setAddPlayMissionId}>
+                      <SelectTrigger className="bg-black/20 flex-1" data-testid="select-add-play-mission">
+                        <SelectValue placeholder="اختر مهمة لإضافتها..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {missions.map(m => (
+                          <SelectItem key={m.id} value={m.id}>{m.title} ({m.points} XP)</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button 
+                      onClick={handleAddPlay}
+                      disabled={!addPlayMissionId}
+                      className="bg-green-500 text-white hover:bg-green-600"
+                      data-testid="button-add-play"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsEditUserOpen(false)} data-testid="button-cancel-edit-user">إلغاء</Button>
+                <Button onClick={handleSaveUserEdit} className="bg-primary text-black font-bold" data-testid="button-save-edit-user">حفظ التغييرات</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
       </Tabs>
     </div>

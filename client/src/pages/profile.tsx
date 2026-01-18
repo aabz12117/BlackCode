@@ -54,7 +54,8 @@ export default function Profile() {
   const currentLevelPoints = (user.level - 1) * 200;
   const pointsInCurrentLevel = user.points - currentLevelPoints;
   const pointsNeededForLevel = 200;
-  const progress = (pointsInCurrentLevel / pointsNeededForLevel) * 100;
+  const xpNeededForNextLevel = nextLevelPoints - user.points;
+  const progress = Math.min((pointsInCurrentLevel / pointsNeededForLevel) * 100, 100);
 
   // Count completed missions
   const completedMissions = plays.filter((p: Play) => p.completed).length;
@@ -92,7 +93,7 @@ export default function Profile() {
                     ? 'bg-blue-500/20 text-blue-400 border-blue-500/20' 
                     : 'bg-primary/20 text-primary border-primary/20'
               }`}>
-                {user.role === 'owner' ? 'المالك' : user.role === 'admin' ? 'مشرف النظام' : 'عميل ميداني'}
+                {user.role === 'owner' ? 'المالك' : user.role === 'admin' ? 'مشرف النظام' : 'عميل للمنظمه'}
               </span>
             </div>
             <p 
@@ -140,7 +141,10 @@ export default function Profile() {
                 <span>التقدم للمستوى {user.level + 1}</span>
                 <span className="font-mono text-muted-foreground">{Math.floor(progress)}%</span>
               </div>
-              <Progress value={Math.min(progress, 100)} className="h-2 bg-white/5" />
+              <Progress value={progress} className="h-2 bg-white/5" />
+              <p className="text-xs text-muted-foreground text-center">
+                تحتاج <span className="text-primary font-bold">{xpNeededForNextLevel}</span> XP للوصول للمستوى التالي
+              </p>
             </div>
 
             <div className="grid grid-cols-3 gap-2 md:gap-4">

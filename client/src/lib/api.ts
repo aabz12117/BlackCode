@@ -174,3 +174,52 @@ export async function refreshUser(id: string): Promise<User> {
   if (!res.ok) throw new Error("Failed to refresh user");
   return res.json();
 }
+
+// Owner-only: Full user update
+export async function updateUserFull(id: string, data: { name?: string; code?: string; points?: number; level?: number }, requesterId: string): Promise<User> {
+  const res = await fetch(`/api/users/${id}/full`, {
+    method: "PATCH",
+    headers: { 
+      "Content-Type": "application/json",
+      "X-Requester-ID": requesterId
+    },
+    body: JSON.stringify(data),
+  });
+  
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || "Failed to update user");
+  }
+  return res.json();
+}
+
+// Owner-only: Add play for user
+export async function addPlayForUser(userId: string, missionId: string, completed: boolean, score: number, requesterId: string): Promise<Play> {
+  const res = await fetch(`/api/users/${userId}/plays`, {
+    method: "POST",
+    headers: { 
+      "Content-Type": "application/json",
+      "X-Requester-ID": requesterId
+    },
+    body: JSON.stringify({ missionId, completed, score }),
+  });
+  
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || "Failed to add play");
+  }
+  return res.json();
+}
+
+// Owner-only: Delete play
+export async function deletePlay(id: string, requesterId: string): Promise<void> {
+  const res = await fetch(`/api/plays/${id}`, {
+    method: "DELETE",
+    headers: { "X-Requester-ID": requesterId },
+  });
+  
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || "Failed to delete play");
+  }
+}
