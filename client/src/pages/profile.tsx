@@ -1,29 +1,72 @@
+import { useEffect } from "react";
 import { useStore } from "@/lib/store";
 import { useQuery } from "@tanstack/react-query";
-import { getMissions } from "@/lib/api";
-import { User, Shield, Trophy, Activity, History, Clock } from "lucide-react";
+import { getMissions, getUserPlays, refreshUser } from "@/lib/api";
+import type { Play } from "@shared/schema";
+import { User, Shield, Trophy, Activity, History, Clock, Target, CheckCircle2, XCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { formatDistanceToNow } from "date-fns";
+import { ar } from "date-fns/locale";
 
 export default function Profile() {
-  const { user } = useStore();
+  const { user, setUser } = useStore();
+  
+  // Fetch missions
   const { data: missions = [] } = useQuery({
     queryKey: ["missions"],
     queryFn: () => getMissions(),
+    refetchInterval: 30000,
   });
+
+  // Fetch user's play history
+  const { data: plays = [] } = useQuery({
+    queryKey: ["plays", user?.id],
+    queryFn: () => getUserPlays(user!.id),
+    enabled: !!user?.id,
+    refetchInterval: 10000,
+  });
+
+  // Refresh user data periodically
+  const { data: freshUser, dataUpdatedAt } = useQuery({
+    queryKey: ["user", user?.id],
+    queryFn: () => refreshUser(user!.id),
+    enabled: !!user?.id,
+    refetchInterval: 10000,
+  });
+
+  // Update local user when fresh data arrives (only if query data is newer)
+  useEffect(() => {
+    if (freshUser && dataUpdatedAt && freshUser.points !== user?.points) {
+      // Only update if the fresh data has more points (can't lose points in this game)
+      // or if it's a different level
+      if (freshUser.points >= (user?.points || 0) || freshUser.level !== user?.level) {
+        setUser(freshUser);
+      }
+    }
+  }, [freshUser, dataUpdatedAt, user?.points, user?.level, setUser]);
 
   if (!user) return null;
 
-  // Mock calculation for next level progress
+  // Calculate level progress
   const nextLevelPoints = user.level * 200;
-  const progress = (user.points % 200) / 200 * 100;
+  const currentLevelPoints = (user.level - 1) * 200;
+  const pointsInCurrentLevel = user.points - currentLevelPoints;
+  const pointsNeededForLevel = 200;
+  const progress = (pointsInCurrentLevel / pointsNeededForLevel) * 100;
 
-  // Mock history - in a real app this would be in the store/database
-  const history = [
-    { action: "تم إكمال مهمة 'تفكيك الشفرة'", date: "منذ 2 ساعة", points: "+100", type: "success" },
-    { action: "تسجيل الدخول للنظام", date: "منذ 2 ساعة", points: "", type: "info" },
-    { action: "محاولة فاشلة 'اختراق الجدار'", date: "الأمس", points: "", type: "error" },
-  ];
+  // Count completed missions
+  const completedMissions = plays.filter((p: Play) => p.completed).length;
+  const totalPoints = plays.reduce((sum: number, p: Play) => sum + (p.completed ? p.score : 0), 0);
+
+  // Format play history
+  const formatDate = (date: Date | string) => {
+    try {
+      return formatDistanceToNow(new Date(date), { addSuffix: true, locale: ar });
+    } catch {
+      return "منذ قليل";
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -50,11 +93,11 @@ export default function Profile() {
             <div className="flex flex-wrap gap-4 justify-center md:justify-start mt-4">
               <div className="bg-white/5 px-4 py-2 rounded border border-white/5 flex items-center gap-2">
                 <Trophy className="w-4 h-4 text-yellow-500" />
-                <span className="font-mono font-bold text-yellow-500">{user.points} XP</span>
+                <span className="font-mono font-bold text-yellow-500" data-testid="text-user-points">{user.points} XP</span>
               </div>
               <div className="bg-white/5 px-4 py-2 rounded border border-white/5 flex items-center gap-2">
                 <Shield className="w-4 h-4 text-primary" />
-                <span className="font-mono font-bold text-primary">المستوى {user.level}</span>
+                <span className="font-mono font-bold text-primary" data-testid="text-user-level">المستوى {user.level}</span>
               </div>
             </div>
           </div>
@@ -76,17 +119,27 @@ export default function Profile() {
                 <span>التقدم للمستوى {user.level + 1}</span>
                 <span className="font-mono text-muted-foreground">{Math.floor(progress)}%</span>
               </div>
-              <Progress value={progress} className="h-2 bg-white/5" />
+              <Progress value={Math.min(progress, 100)} className="h-2 bg-white/5" />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="p-4 rounded bg-white/5 border border-white/5 text-center">
-                <div className="text-2xl font-bold font-mono text-foreground">{missions.filter(m => m.active).length}</div>
+                <div className="text-2xl font-bold font-mono text-foreground" data-testid="text-active-missions">
+                  {missions.filter(m => m.active).length}
+                </div>
                 <div className="text-xs text-muted-foreground mt-1">مهام نشطة</div>
               </div>
               <div className="p-4 rounded bg-white/5 border border-white/5 text-center">
-                <div className="text-2xl font-bold font-mono text-foreground">3</div>
+                <div className="text-2xl font-bold font-mono text-green-500" data-testid="text-completed-missions">
+                  {completedMissions}
+                </div>
                 <div className="text-xs text-muted-foreground mt-1">مهام مكتملة</div>
+              </div>
+              <div className="p-4 rounded bg-white/5 border border-white/5 text-center">
+                <div className="text-2xl font-bold font-mono text-yellow-500" data-testid="text-total-earned">
+                  {totalPoints}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">نقاط مكتسبة</div>
               </div>
             </div>
           </CardContent>
@@ -101,25 +154,40 @@ export default function Profile() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {history.map((item, i) => (
-                <div key={i} className="flex items-center gap-3 p-3 rounded hover:bg-white/5 transition-colors">
-                  <div className={`w-2 h-2 rounded-full shrink-0 ${
-                    item.type === 'success' ? 'bg-green-500' : 
-                    item.type === 'error' ? 'bg-red-500' : 'bg-blue-500'
-                  }`} />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{item.action}</p>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                      <Clock className="w-3 h-3" />
-                      {item.date}
-                    </div>
-                  </div>
-                  {item.points && (
-                    <span className="font-mono text-sm font-bold text-green-500">{item.points}</span>
-                  )}
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {plays.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                  <Target className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>لا يوجد نشاط بعد</p>
+                  <p className="text-xs mt-1">ابدأ بإكمال المهمات لرؤية سجلك هنا</p>
                 </div>
-              ))}
+              ) : (
+                plays.slice(0, 10).map((play: Play) => {
+                  const mission = missions.find(m => m.id === play.missionId);
+                  return (
+                    <div key={play.id} className="flex items-center gap-3 p-3 rounded hover:bg-white/5 transition-colors" data-testid={`row-play-${play.id}`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                        play.completed ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
+                      }`}>
+                        {play.completed ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {play.completed ? 'أكمل' : 'حاول'} مهمة "{mission?.title || 'غير معروفة'}"
+                        </p>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                          <Clock className="w-3 h-3" />
+                          {formatDate(play.timestamp)}
+                          {play.timeSpent && <span className="mr-2">• {play.timeSpent} ثانية</span>}
+                        </div>
+                      </div>
+                      {play.completed && play.score > 0 && (
+                        <span className="font-mono text-sm font-bold text-green-500">+{play.score}</span>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
           </CardContent>
         </Card>

@@ -10,6 +10,7 @@ export default function Leaderboard() {
   const { data: users = [] } = useQuery({
     queryKey: ["leaderboard"],
     queryFn: fetchLeaderboard,
+    refetchInterval: 15000,
   });
 
   return (

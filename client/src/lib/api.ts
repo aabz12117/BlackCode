@@ -113,3 +113,10 @@ export async function getLeaderboard(): Promise<User[]> {
   if (!res.ok) throw new Error("Failed to fetch leaderboard");
   return res.json();
 }
+
+// Refresh user data
+export async function refreshUser(id: string): Promise<User> {
+  const res = await fetch(`/api/users/${id}`);
+  if (!res.ok) throw new Error("Failed to refresh user");
+  return res.json();
+}

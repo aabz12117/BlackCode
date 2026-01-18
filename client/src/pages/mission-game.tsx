@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useRoute } from "wouter";
 import { useStore } from "@/lib/store";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getMission, recordPlay } from "@/lib/api";
+import { getMission, recordPlay, refreshUser } from "@/lib/api";
 import { motion } from "framer-motion";
 import { ArrowRight, Terminal, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Link } from "wouter";
 
 export default function MissionGame() {
   const [, params] = useRoute("/mission/:id");
-  const { user } = useStore();
+  const { user, setUser } = useStore();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [gameState, setGameState] = useState<'playing' | 'won' | 'lost'>('playing');
@@ -26,9 +26,19 @@ export default function MissionGame() {
 
   const recordPlayMutation = useMutation({
     mutationFn: recordPlay,
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Invalidate all related queries
       queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["plays"] });
+      
+      // Refresh user data to get updated points
+      if (user) {
+        const updatedUser = await refreshUser(user.id);
+        setUser(updatedUser);
+        // Also invalidate the user query to keep cache in sync
+        queryClient.invalidateQueries({ queryKey: ["user", user.id] });
+      }
     },
   });
 
