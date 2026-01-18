@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
 import { useQuery } from "@tanstack/react-query";
 import { getMissions, getUserPlays, refreshUser } from "@/lib/api";
@@ -11,6 +11,7 @@ import { ar } from "date-fns/locale";
 
 export default function Profile() {
   const { user, setUser } = useStore();
+  const [showCode, setShowCode] = useState(false);
   
   // Fetch missions
   const { data: missions = [] } = useQuery({
@@ -94,7 +95,16 @@ export default function Profile() {
                 {user.role === 'owner' ? 'المالك' : user.role === 'admin' ? 'مشرف النظام' : 'عميل ميداني'}
               </span>
             </div>
-            <p className="font-mono text-base md:text-xl text-muted-foreground tracking-widest">{user.code}</p>
+            <p 
+              className={`font-mono text-base md:text-xl tracking-widest cursor-pointer select-none transition-all duration-200 ${
+                showCode ? 'text-primary' : 'text-muted-foreground'
+              }`}
+              onClick={() => setShowCode(!showCode)}
+              title={showCode ? 'اضغط للإخفاء' : 'اضغط لإظهار الكود'}
+              data-testid="profile-code-display"
+            >
+              {showCode ? user.code : '••••••••••'}
+            </p>
             
             <div className="flex flex-wrap gap-2 md:gap-4 justify-center md:justify-start mt-3 md:mt-4">
               <div className="bg-white/5 px-3 py-1.5 md:px-4 md:py-2 rounded border border-white/5 flex items-center gap-2">
