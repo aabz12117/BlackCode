@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -366,16 +367,14 @@ export default function Admin() {
   };
 
   const handleDeleteMission = async (missionId: string) => {
-    if (confirm("هل أنت متأكد من حذف هذه المهمة؟")) {
-      try {
-        await deleteMissionMutation.mutateAsync(missionId);
-      } catch (error: any) {
-        toast({
-          variant: "destructive",
-          title: "فشل حذف المهمة",
-          description: error.message,
-        });
-      }
+    try {
+      await deleteMissionMutation.mutateAsync(missionId);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "فشل حذف المهمة",
+        description: error.message,
+      });
     }
   };
 
@@ -461,16 +460,14 @@ export default function Admin() {
   };
 
   const handleDeletePlay = async (playId: string) => {
-    if (confirm("هل أنت متأكد من حذف هذا الإنجاز؟")) {
-      try {
-        await deletePlayMutation.mutateAsync(playId);
-      } catch (error: any) {
-        toast({
-          variant: "destructive",
-          title: "فشل حذف الإنجاز",
-          description: error.message,
-        });
-      }
+    try {
+      await deletePlayMutation.mutateAsync(playId);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "فشل حذف الإنجاز",
+        description: error.message,
+      });
     }
   };
 
@@ -816,15 +813,35 @@ export default function Admin() {
                          >
                            <Edit className="w-3.5 h-3.5 md:w-4 md:h-4" />
                          </Button>
-                         <Button 
-                           size="icon" 
-                           variant="ghost" 
-                           className="h-7 w-7 md:h-8 md:w-8 text-destructive hover:bg-destructive/10"
-                           onClick={() => handleDeleteMission(mission.id)}
-                           data-testid={`button-delete-mission-${mission.id}`}
-                         >
-                           <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                         </Button>
+                         <AlertDialog>
+                           <AlertDialogTrigger asChild>
+                             <Button 
+                               size="icon" 
+                               variant="ghost" 
+                               className="h-7 w-7 md:h-8 md:w-8 text-destructive hover:bg-destructive/10"
+                               data-testid={`button-delete-mission-${mission.id}`}
+                             >
+                               <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                             </Button>
+                           </AlertDialogTrigger>
+                           <AlertDialogContent className="bg-card border-white/10">
+                             <AlertDialogHeader>
+                               <AlertDialogTitle>حذف المهمة</AlertDialogTitle>
+                               <AlertDialogDescription>
+                                 هل أنت متأكد من حذف هذه المهمة؟ لا يمكن التراجع عن هذا الإجراء.
+                               </AlertDialogDescription>
+                             </AlertDialogHeader>
+                             <AlertDialogFooter className="gap-2">
+                               <AlertDialogCancel className="bg-white/5 border-white/10 hover:bg-white/10">إلغاء</AlertDialogCancel>
+                               <AlertDialogAction 
+                                 onClick={() => handleDeleteMission(mission.id)}
+                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                               >
+                                 حذف
+                               </AlertDialogAction>
+                             </AlertDialogFooter>
+                           </AlertDialogContent>
+                         </AlertDialog>
                       </div>
                     </div>
                   </div>
@@ -1215,15 +1232,35 @@ export default function Admin() {
                                 <span className="text-xs text-yellow-500">+{play.score} XP</span>
                               )}
                             </div>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-6 w-6 p-0 text-destructive hover:bg-destructive/10"
-                              onClick={() => handleDeletePlay(play.id)}
-                              data-testid={`button-delete-play-${play.id}`}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-6 w-6 p-0 text-destructive hover:bg-destructive/10"
+                                  data-testid={`button-delete-play-${play.id}`}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="bg-card border-white/10">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>حذف الإنجاز</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    هل أنت متأكد من حذف هذا الإنجاز؟
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter className="gap-2">
+                                  <AlertDialogCancel className="bg-white/5 border-white/10 hover:bg-white/10">إلغاء</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={() => handleDeletePlay(play.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    حذف
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         );
                       })
