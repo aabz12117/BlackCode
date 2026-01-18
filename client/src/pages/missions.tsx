@@ -84,7 +84,7 @@ export default function Missions() {
       {filteredMissions.length === 0 ? (
         <div className="text-center py-16">
           <Target className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
-          <h3 className="text-xl font-display font-bold text-muted-foreground mb-2">لا توجد مهام متاحة</h3>
+          <h3 className="text-xl font-display font-bold text-muted-foreground mb-2">لا يوجد مهام حالياً</h3>
           <p className="text-sm text-muted-foreground/70">ترقب المهام الجديدة قريباً!</p>
         </div>
       ) : (
