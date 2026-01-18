@@ -3,7 +3,7 @@ import type { Mission, Play } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import { getMissions, getUserPlays } from "@/lib/api";
 import { motion } from "framer-motion";
-import { Gamepad2, AlertTriangle, Clock, Lock, Star, Play as PlayIcon, Timer, CheckCircle2 } from "lucide-react";
+import { Gamepad2, AlertTriangle, Clock, Lock, Star, Play as PlayIcon, Timer, CheckCircle2, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
 import { useState, useEffect } from "react";
@@ -81,16 +81,24 @@ export default function Missions() {
         <p className="text-muted-foreground font-mono text-xs md:text-sm">أكمل المهام لرفع مستواك وكسب النقاط.</p>
       </div>
 
-      <motion.div 
-        variants={container}
-        initial="hidden"
-        animate="show"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6"
-      >
-        {filteredMissions.map((mission) => (
-          <MissionCard key={mission.id} mission={mission} plays={plays} />
-        ))}
-      </motion.div>
+      {filteredMissions.length === 0 ? (
+        <div className="text-center py-16">
+          <Target className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
+          <h3 className="text-xl font-display font-bold text-muted-foreground mb-2">لا توجد مهام متاحة</h3>
+          <p className="text-sm text-muted-foreground/70">ترقب المهام الجديدة قريباً!</p>
+        </div>
+      ) : (
+        <motion.div 
+          variants={container}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6"
+        >
+          {filteredMissions.map((mission) => (
+            <MissionCard key={mission.id} mission={mission} plays={plays} />
+          ))}
+        </motion.div>
+      )}
     </div>
   );
 }
@@ -130,6 +138,13 @@ function MissionCard({ mission, plays }: { mission: Mission; plays: Play[] }) {
     expert: "text-red-500"
   };
 
+  const difficultyLabel: Record<string, string> = {
+    easy: "سهل",
+    medium: "متوسط",
+    hard: "صعب",
+    expert: "خبير"
+  };
+
   const isLocked = !mission.active;
   const isOnCooldown = cooldownRemaining > 0 && !isOneTimeCompleted;
 
@@ -164,7 +179,7 @@ function MissionCard({ mission, plays }: { mission: Mission; plays: Play[] }) {
           </div>
           <div className="bg-white/5 rounded px-2 py-1 flex items-center gap-1 md:gap-2">
             <AlertTriangle className="w-3 h-3 opacity-70" />
-            <span className={cn("uppercase", difficultyColor[mission.difficulty])}>{mission.difficulty}</span>
+            <span className={cn(difficultyColor[mission.difficulty])}>{difficultyLabel[mission.difficulty] || mission.difficulty}</span>
           </div>
         </div>
 

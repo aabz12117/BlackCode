@@ -655,7 +655,12 @@ export default function Admin() {
                         <Target className="w-4 h-4 md:w-5 md:h-5" />
                       </div>
                       <div>
-                        <h4 className={`font-bold text-sm md:text-base ${!mission.active && 'text-muted-foreground line-through'}`}>{mission.title}</h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className={`font-bold text-sm md:text-base ${!mission.active && 'text-muted-foreground line-through'}`}>{mission.title}</h4>
+                          {mission.hidden && (
+                            <span className="text-[10px] px-1.5 py-0.5 bg-orange-500/20 text-orange-400 rounded">مخفي</span>
+                          )}
+                        </div>
                         <div className="flex gap-2 text-[10px] md:text-xs text-muted-foreground font-mono mt-0.5 md:mt-1">
                           <span className="uppercase">{mission.difficulty}</span>
                           <span>•</span>

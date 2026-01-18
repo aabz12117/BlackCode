@@ -95,7 +95,7 @@ export default function Leaderboard() {
               </div>
               
               <div className="font-mono font-bold text-sm md:text-base text-yellow-500 shrink-0">
-                {user.points.toLocaleString()}
+                {user.points.toLocaleString()} <span className="text-xs opacity-70">XP</span>
               </div>
             </motion.div>
           ))}
