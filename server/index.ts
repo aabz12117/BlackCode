@@ -60,10 +60,10 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Seed database on startup (only once)
-  const { seedDatabase } = await import("./seed");
-  await seedDatabase();
-  
+  // Initialize memory storage
+  const { initializeMemoryStorage } = await import("./storage");
+  initializeMemoryStorage();
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
@@ -95,11 +95,8 @@ app.use((req, res, next) => {
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
   httpServer.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
+    port,
+    "127.0.0.1",
     () => {
       log(`serving on port ${port}`);
     },
