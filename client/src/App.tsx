@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route, useLocation, Router as WouterRouter } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
@@ -13,7 +13,7 @@ import MissionGame from "@/pages/mission-game"; // We'll create this next
 import { useStore } from "@/lib/store";
 import { useEffect } from "react";
 
-function Router() {
+function AppRouter() {
   const { user } = useStore();
   const [location, setLocation] = useLocation();
 
@@ -30,7 +30,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Entry} />
-      
+
       {/* Protected Routes Wrapper */}
       {user && (
         <Layout>
@@ -44,7 +44,7 @@ function Router() {
           </Switch>
         </Layout>
       )}
-      
+
       {/* Fallback for unauthenticated access to other routes (although effect handles this) */}
       {!user && <Route component={Entry} />}
     </Switch>
@@ -52,10 +52,17 @@ function Router() {
 }
 
 function App() {
+  // Use the base path from Vite config (e.g., /BlackCode/)
+  // Remove trailing slash for compatibility if needed, though wouter usually handles it.
+  // Using import.meta.env.BASE_URL ensures it works in both dev (/) and prod (/BlackCode/)
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+
   return (
     <QueryClientProvider client={queryClient}>
       <Toaster />
-      <Router />
+      <WouterRouter base={base}>
+        <AppRouter />
+      </WouterRouter>
     </QueryClientProvider>
   );
 }
