@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { CheckCircle, ExternalLink, Lock, Unlock, XCircle, Terminal, Award, Users, QrCode } from "lucide-react";
-import { Task } from "../types";
+import { CheckCircle, ExternalLink, Lock, Unlock, XCircle, Terminal, Award, Users, QrCode, Star, Circle } from "lucide-react";
+import { Task, AccountStatus } from "../types";
 import { QRScanner } from "./QRScanner";
 
 interface TaskCardProps {
@@ -8,9 +8,10 @@ interface TaskCardProps {
   onSolve: (points: number) => void;
   isAlreadySolved: boolean;
   currentWinners: number;
+  userStatus?: AccountStatus;
 }
 
-export const TaskCard = ({ task, onSolve, isAlreadySolved, currentWinners }: TaskCardProps) => {
+export const TaskCard = ({ task, onSolve, isAlreadySolved, currentWinners, userStatus }: TaskCardProps) => {
   const [input, setInput] = useState("");
   const [status, setStatus] = useState<'idle' | 'success' | 'fail' | 'loading'>('idle');
   const [showScanner, setShowScanner] = useState(false);
@@ -19,17 +20,35 @@ export const TaskCard = ({ task, onSolve, isAlreadySolved, currentWinners }: Tas
   // Determine actual status based on logic
   // If maxWinners is 0, it means UNLIMITED allowed winners.
   const isFull = task.maxWinners === 0 ? false : currentWinners >= task.maxWinners;
-  const isFinished = isFull || task.status === 'finished';
   
-  // If already solved, show solved state initially
-  const [solvedState, setSolvedState] = useState(isAlreadySolved);
+  // If user is paused, they can solve even if finished/full
+  const isFinished = userStatus === 'paused' ? false : (isFull || task.status === 'finished');
+  
+  // If already solved, show solved state initially, UNLESS paused (paused users can re-solve)
+  const [solvedState, setSolvedState] = useState(userStatus === 'paused' ? false : isAlreadySolved);
 
   const performSolve = async (solutionAttempt: string) => {
       if (solutionAttempt.trim() === task.solution.trim()) {
         setStatus('loading');
-        await onSolve(task.points);
+        // Only submit if NOT paused (paused users don't get points/record)
+        if (userStatus !== 'paused') {
+            await onSolve(task.points);
+        } else {
+            // Simulate success for paused user
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
         setStatus('success');
-        setSolvedState(true);
+        
+        // Paused users don't get permanent solved state, just temporary success feedback
+        if (userStatus !== 'paused') {
+            setSolvedState(true);
+        } else {
+            setTimeout(() => {
+                setStatus('idle');
+                setInput("");
+            }, 3000);
+        }
       } else {
         setStatus('fail');
         setTimeout(() => setStatus('idle'), 2000);
@@ -38,7 +57,8 @@ export const TaskCard = ({ task, onSolve, isAlreadySolved, currentWinners }: Tas
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || status === 'loading' || isFinished || isAlreadySolved) return;
+    // Paused users can solve even if "already solved" (which we force to false above)
+    if (!input.trim() || status === 'loading' || isFinished || (userStatus !== 'paused' && isAlreadySolved)) return;
     performSolve(input);
   };
 
@@ -64,7 +84,9 @@ export const TaskCard = ({ task, onSolve, isAlreadySolved, currentWinners }: Tas
         ? 'bg-gradient-to-br from-success/5 to-black border-success/30 shadow-[0_0_15px_rgba(34,197,94,0.05)]' 
         : isFinished 
           ? 'bg-[#050505] border-red-900/50 opacity-80'
-          : 'bg-[#0a0a0a] border-white/10 hover:border-primary/40'
+          : task.category === 'main' 
+            ? 'bg-[#0a0a0a] border-primary/30 shadow-[0_0_10px_rgba(59,130,246,0.1)]'
+            : 'bg-[#0a0a0a] border-white/10 hover:border-white/20'
       }
     `}>
       {/* Background Tech Lines */}
@@ -76,6 +98,17 @@ export const TaskCard = ({ task, onSolve, isAlreadySolved, currentWinners }: Tas
           <div className="flex justify-between items-start mb-4">
               <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
+                     {/* Category Badge */}
+                     {task.category === 'main' ? (
+                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-primary text-black flex items-center gap-1">
+                             <Star size={10} fill="black" /> أساسية
+                         </span>
+                     ) : (
+                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/10 text-dim flex items-center gap-1">
+                             <Circle size={8} /> جانبية
+                         </span>
+                     )}
+
                      {solvedState ? (
                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-success text-black flex items-center gap-1">
                              <CheckCircle size={10} /> مكتملة
@@ -127,7 +160,7 @@ export const TaskCard = ({ task, onSolve, isAlreadySolved, currentWinners }: Tas
               </a>
 
               {/* Solve Area */}
-              {!solvedState && !isFinished && (
+              {(!solvedState || userStatus === 'paused') && !isFinished && status !== 'success' && (
                   <div className="relative">
                       <form onSubmit={handleVerify} className="flex gap-2">
                           <div className="relative flex-1">
@@ -177,14 +210,21 @@ export const TaskCard = ({ task, onSolve, isAlreadySolved, currentWinners }: Tas
                   </div>
               )}
               
-              {solvedState && (
+              {solvedState && userStatus !== 'paused' && (
                   <div className="w-full py-2 bg-success/10 border border-success/20 rounded-lg flex items-center justify-center gap-2 text-success text-xs font-bold">
                       <Unlock size={14} /> 
                       <span>تمت العملية بنجاح</span>
                   </div>
               )}
               
-              {isFinished && !solvedState && (
+              {status === 'success' && userStatus === 'paused' && (
+                  <div className="w-full py-2 bg-success/10 border border-success/20 rounded-lg flex items-center justify-center gap-2 text-success text-xs font-bold animate-pulse">
+                      <Unlock size={14} /> 
+                      <span>تمت العملية بنجاح (وضع التدريب)</span>
+                  </div>
+              )}
+
+              {isFinished && !solvedState && userStatus !== 'paused' && (
                   <div className="w-full py-2 bg-red-900/20 border border-red-500/20 rounded-lg flex items-center justify-center gap-2 text-red-400 text-xs font-bold">
                       <Lock size={14} /> 
                       <span>العملية مغلقة</span>

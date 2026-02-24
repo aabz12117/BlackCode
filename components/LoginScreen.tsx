@@ -17,6 +17,8 @@ export const LoginScreen = ({ onLogin, users }: LoginScreenProps) => {
   const [isLocked, setIsLocked] = useState(false);
   const [lockoutTimer, setLockoutTimer] = useState(0);
   const [showScanner, setShowScanner] = useState(false);
+  const [pendingQrUser, setPendingQrUser] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   
   // State to manage blur effect on focus
   const [isCodeFocused, setIsCodeFocused] = useState(false);
@@ -35,7 +37,7 @@ export const LoginScreen = ({ onLogin, users }: LoginScreenProps) => {
     return () => clearInterval(timer);
   }, [isLocked, lockoutTimer]);
 
-  const handleLogin = (uName: string, pCode: string) => {
+  const handleLogin = (uName: string, pCode: string, isAutoQr: boolean = false) => {
     if (isLocked) return;
 
     const cleanUser = uName.trim();
@@ -52,13 +54,26 @@ export const LoginScreen = ({ onLogin, users }: LoginScreenProps) => {
           logUserAction(user, "LOGIN_FAIL", "BANNED USER ATTEMPT", { user: cleanUser, code: cleanCode });
           return;
       }
-      if (user.status === 'paused') {
-          setError("الحساب موقوف مؤقتاً");
-          logUserAction(user, "LOGIN_FAIL", "PAUSED USER ATTEMPT", { user: cleanUser, code: cleanCode });
-          return;
+      // Paused users can now login normally
+      
+      setIsLoading(true);
+      logUserAction(user, "LOGIN_SUCCESS", isAutoQr ? "QR Auto Login" : "Manual/Verified Login");
+      
+      // If this was a pending QR verification OR a manual login that matches a known QR user, update trust timestamp
+      // We update timestamp on ANY successful login to refresh the 2-week window if they manually logged in too
+      try {
+          const trustedMap = JSON.parse(localStorage.getItem('trusted_qr_sessions') || '{}');
+          trustedMap[cleanUser.toLowerCase()] = Date.now();
+          localStorage.setItem('trusted_qr_sessions', JSON.stringify(trustedMap));
+      } catch (e) {
+          console.error("Failed to save trusted user session", e);
       }
-      logUserAction(user, "LOGIN_SUCCESS", "Manual Login");
-      onLogin(user);
+
+      // Simulate loading delay for effect
+      setTimeout(() => {
+          onLogin(user);
+      }, 1500);
+
     } else {
       const newAttempts = attempts + 1;
       setAttempts(newAttempts);
@@ -84,42 +99,57 @@ export const LoginScreen = ({ onLogin, users }: LoginScreenProps) => {
 
   const handleScan = (data: string) => {
       setShowScanner(false);
-      try {
-        let qrUser = "";
-        let qrCode = "";
-        
-        // Format: USER:PIN (e.g. Code01:1234)
-        if (data.includes(":")) {
-             const separatorIndex = data.indexOf(":");
-             qrUser = data.substring(0, separatorIndex).trim();
-             qrCode = data.substring(separatorIndex + 1).trim();
-        } 
-        // Legacy JSON support
-        else if (data.trim().startsWith("{")) {
-           try {
-              const parsed = JSON.parse(data);
-              qrUser = parsed.username || "";
-              qrCode = parsed.code || "";
-           } catch (e) { /* ignore */ }
-        }
-        // Legacy Space support
-        else if (data.includes(" ")) {
-           const parts = data.split(" ");
-           if (parts.length >= 2) {
-               qrUser = parts[0];
-               qrCode = parts[1];
-           }
-        }
-
-        if (qrUser && qrCode) {
-            handleLogin(qrUser, qrCode);
-        } else {
-            setError("تنسيق QR غير صالح (المطلوب USER:PIN)");
-        }
-      } catch (e) {
-         setError("خطأ في قراءة الرمز");
+      const scannedUser = data.trim();
+      
+      if (!scannedUser) {
+          setError("رمز QR فارغ");
+          return;
       }
+
+      // Check if trusted and valid (2 weeks = 14 * 24 * 60 * 60 * 1000 ms)
+      const TWO_WEEKS_MS = 1209600000;
+      
+      try {
+          const trustedMap = JSON.parse(localStorage.getItem('trusted_qr_sessions') || '{}');
+          const lastLogin = trustedMap[scannedUser.toLowerCase()];
+          
+          if (lastLogin && (Date.now() - lastLogin < TWO_WEEKS_MS)) {
+              // Find user to get the code for simulation
+              const userObj = users.find(u => u.username.toLowerCase() === scannedUser.toLowerCase());
+              if (userObj) {
+                  // Auto login
+                  handleLogin(userObj.username, userObj.code, true);
+                  return;
+              }
+          }
+      } catch (e) {
+          console.error("Error reading trusted users", e);
+      }
+
+      // First time scan or expired
+      setUsername(scannedUser);
+      setCode("");
+      setPendingQrUser(scannedUser);
+      setError("يرجى إدخال الرمز السري لتأكيد الهوية");
   };
+
+  if (users.length === 0) {
+      return (
+        <div className="min-h-screen bg-black text-white flex items-center justify-center p-6" dir="rtl">
+            <div className="text-center space-y-4 max-w-md bg-white/5 p-8 rounded-2xl border border-white/10">
+                <AlertTriangle size={48} className="mx-auto text-alert animate-pulse" />
+                <h1 className="text-2xl font-bold text-alert">النظام غير متصل</h1>
+                <p className="text-dim text-sm leading-relaxed">تعذر الاتصال بقاعدة البيانات المركزية. قد تكون هناك مشكلة في الاتصال أو الصلاحيات.</p>
+                <button 
+                    onClick={() => window.location.reload()}
+                    className="px-6 py-3 bg-primary hover:bg-blue-600 text-black rounded-lg text-sm font-bold transition-colors w-full"
+                >
+                    إعادة المحاولة
+                </button>
+            </div>
+        </div>
+      );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white font-sans relative overflow-hidden flex items-center justify-center p-6" dir="rtl">
@@ -136,6 +166,15 @@ export const LoginScreen = ({ onLogin, users }: LoginScreenProps) => {
       <div className="absolute inset-0 bg-carbon opacity-20"></div>
       <div className="absolute top-1/4 -right-20 w-80 h-80 bg-primary/10 rounded-full blur-[120px] animate-pulse pointer-events-none"></div>
       <div className="absolute bottom-1/4 -left-20 w-80 h-80 bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
+
+      {/* Loading Overlay */}
+      {isLoading && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center animate-in fade-in duration-300">
+            <div className="w-24 h-24 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-6"></div>
+            <h2 className="text-2xl font-black text-white mb-2 tracking-widest">جاري المصادقة</h2>
+            <p className="text-primary font-mono text-sm animate-pulse">يتم التحقق من بيانات الاعتماد...</p>
+        </div>
+      )}
 
       {/* Main Card */}
       <div className="relative z-10 w-full max-w-md bg-black/80 backdrop-blur-xl border border-primary/20 p-8 shadow-[0_0_60px_rgba(59,130,246,0.15)] rounded-2xl">

@@ -9,7 +9,7 @@ interface LeaderboardProps {
 export const Leaderboard = ({ users }: LeaderboardProps) => {
   // Filter out admins and sort by points descending
   const sortedUsers = users
-    .filter(u => !ADMIN_RANKS.includes(u.rank))
+    .filter(u => !ADMIN_RANKS.includes(u.rank) && u.status !== 'paused')
     .sort((a, b) => b.points - a.points);
 
   const topThree = sortedUsers.slice(0, 3);

@@ -1,4 +1,4 @@
-import { User, Task, TaskStatus, ADMIN_RANKS, AccountStatus } from "./types";
+import { User, Task, TaskStatus, ADMIN_RANKS, AccountStatus, TaskCategory } from "./types";
 
 export const SHEET_IDS = {
   USERS: "1sEk4j9_3pscX28BQsEtirWphAFLtQ3A7HcKiYPyLbwA",
@@ -50,7 +50,7 @@ export const fetchGoogleSheet = async (sheetId: string): Promise<Record<string, 
     const text = await response.text();
     return parseCSV(text);
   } catch (error) {
-    console.error("Failed to fetch sheet:", error);
+    // console.error("Failed to fetch sheet:", error);
     return [];
   }
 };
@@ -67,8 +67,8 @@ export const parseUser = (r: Record<string, string>): User | null => {
   // Parse Account Status
   const rawStatus = (r["حالة الحساب"] || "شغال").trim();
   let status: AccountStatus = 'active';
-  if (rawStatus === 'موقف') status = 'paused';
-  if (rawStatus === 'مبند') status = 'banned';
+  if (rawStatus === 'موقف' || rawStatus === 'paused') status = 'paused';
+  if (rawStatus === 'مبند' || rawStatus === 'banned') status = 'banned';
 
   // Parse Completed Tasks (comma separated)
   const completedTasksRaw = r["المهام المنجزه"] || "";
@@ -94,19 +94,22 @@ export const parseTask = (r: Record<string, string>): Task => {
   let status: TaskStatus = 'unknown';
   let isVisible = false;
 
-  if (rawStatus === 'تعمل' || rawStatus.toLowerCase() === 'true' || rawStatus === 'TRUE') {
+  if (rawStatus === 'تعمل' || rawStatus.toLowerCase() === 'true' || rawStatus === 'TRUE' || rawStatus === 'active') {
     status = 'active';
     isVisible = true;
-  } else if (rawStatus === 'موقفه') {
+  } else if (rawStatus === 'موقفه' || rawStatus === 'paused') {
     status = 'paused';
     isVisible = false;
-  } else if (rawStatus === 'منتهيه') {
+  } else if (rawStatus === 'منتهيه' || rawStatus === 'finished') {
     status = 'finished';
     isVisible = false;
   }
 
   const points = parseInt(r["points"] || "0", 10);
   const maxWinners = parseInt(r["كم فوز"] || "1000", 10); // Default to high number if empty
+
+  const rawCategory = (r["تصنيف المهمه"] || r["تصنيف المهمة"] || "جانبي").trim();
+  const category: TaskCategory = rawCategory === 'اساسي' || rawCategory === 'main' ? 'main' : 'side';
 
   return {
     timestamp: r["طابع زمني"] || r["Timestamp"] || "",
@@ -118,14 +121,15 @@ export const parseTask = (r: Record<string, string>): Task => {
     isVisible,
     points: isNaN(points) ? 0 : points,
     maxWinners: isNaN(maxWinners) ? 1000 : maxWinners,
+    category,
     rowId: parseInt(r['_rowIndex'] || "0")
   };
 };
 
 // Helper to count how many users solved a task
-export const getTaskWinnerCount = (taskName: string, allUsers: User[]): number => {
-    return allUsers.filter(u => u.completedTasks.includes(taskName)).length;
-};
+// export const getTaskWinnerCount = (taskName: string, allUsers: User[]): number => {
+//     return allUsers.filter(u => u.completedTasks.includes(taskName) && u.status !== 'paused').length;
+// };
 
 // --- LOGGING SYSTEM ---
 
@@ -210,10 +214,12 @@ export const logUserAction = async (
 [AGENT]: ${ua}
 `.trim().replace(/\n/g, " || ");
 
-        // Send to API
+    // Send to API
+    try {
         await fetch(API_URL, {
             method: "POST",
             mode: "no-cors",
+            keepalive: true,
             headers: {
                 "Content-Type": "text/plain"
             },
@@ -223,9 +229,13 @@ export const logUserAction = async (
                 timestamp: new Date().toISOString()
             })
         });
+    } catch (innerError) {
+        // Silent fail for logging to avoid disrupting user experience
+        // console.warn("Logging failed silently");
+    }
 
     } catch (e) {
-        console.error("Logging failed", e);
+        // console.error("Logging failed", e);
     }
 };
 
@@ -253,11 +263,34 @@ export const submitTaskSolution = async (user: User, taskName: string, taskPoint
 
 export const adminUpdateUser = async (updatedUser: User) => {
    try {
+    const statusArabic = updatedUser.status === 'paused' ? 'موقف' : updatedUser.status === 'banned' ? 'مبند' : 'شغال';
+    
+    // Map to sheet format
+    const sheetData = {
+        ...updatedUser,
+        "_rowIndex": updatedUser.rowId,
+        "rowIndex": updatedUser.rowId,
+        "Username": updatedUser.username,
+        "code": updatedUser.code,
+        "Name": updatedUser.name,
+        "CodeName": updatedUser.codeName,
+        "Rank": updatedUser.rank,
+        "points": updatedUser.points,
+        
+        // Send multiple variations to catch potential header mismatches (e.g. trailing spaces)
+        "حالة الحساب": statusArabic,
+        "حالة الحساب ": statusArabic, 
+        " حالة الحساب": statusArabic,
+        "Status": updatedUser.status, // Also send English status just in case
+        
+        "المهام المنجزه": updatedUser.completedTasks.join(',')
+    };
+
     const response = await fetch(API_URL, {
       method: "POST",
       body: JSON.stringify({
         action: "UPDATE_USER",
-        data: updatedUser
+        data: sheetData
       })
     });
     return await response.json();
@@ -266,11 +299,26 @@ export const adminUpdateUser = async (updatedUser: User) => {
 
 export const adminUpdateTask = async (updatedTask: Task) => {
   try {
+    // Map to sheet format
+    const sheetData = {
+        ...updatedTask,
+        "_rowIndex": updatedTask.rowId,
+        "rowIndex": updatedTask.rowId,
+        "اسم المهمه": updatedTask.taskName,
+        "وصف المهمه": updatedTask.description,
+        "رابط مهمه": updatedTask.link,
+        "حل المهمه": updatedTask.solution,
+        "هل المهمه تعمل": updatedTask.status === 'active' ? 'تعمل' : updatedTask.status === 'paused' ? 'موقفه' : 'منتهيه',
+        "points": updatedTask.points,
+        "كم فوز": updatedTask.maxWinners,
+        "تصنيف المهمه": updatedTask.category === 'main' ? 'اساسي' : 'جانبي'
+    };
+
    const response = await fetch(API_URL, {
      method: "POST",
      body: JSON.stringify({
        action: "UPDATE_TASK",
-       data: updatedTask
+       data: sheetData
      })
    });
    return await response.json();

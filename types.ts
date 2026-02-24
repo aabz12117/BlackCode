@@ -15,6 +15,7 @@ export interface User {
 }
 
 export type TaskStatus = 'active' | 'paused' | 'finished' | 'unknown';
+export type TaskCategory = 'main' | 'side';
 
 export interface Task {
   timestamp: string;
@@ -26,6 +27,7 @@ export interface Task {
   isVisible: boolean;
   points: number;
   maxWinners: number; // كم فوز
+  category: TaskCategory;
   rowId?: number; 
 }
 

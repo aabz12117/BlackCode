@@ -7,40 +7,61 @@ interface AdminPanelProps {
   users: User[];
   tasks: Task[];
   onRefresh: () => void;
+  onUpdateUser?: (u: User) => void;
+  onUpdateTask?: (t: Task) => void;
 }
 
-export const AdminPanel = ({ users, tasks, onRefresh }: AdminPanelProps) => {
+export const AdminPanel = ({ users, tasks, onRefresh, onUpdateUser, onUpdateTask }: AdminPanelProps) => {
   const [tab, setTab] = useState<'users' | 'tasks'>('users');
   const [editingId, setEditingId] = useState<number | null>(null);
   
   // Local state for edits
   const [editForm, setEditForm] = useState<any>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState<{text: string, type: 'success'|'error'} | null>(null);
 
   const startEditUser = (user: User) => {
     setEditingId(user.rowId || 0);
     setEditForm({ ...user });
+    setMessage(null);
   };
 
   const startEditTask = (task: Task) => {
     setEditingId(task.rowId || 0);
     setEditForm({ ...task });
+    setMessage(null);
   };
 
   const handleSaveUser = async () => {
     setIsSaving(true);
-    await adminUpdateUser(editForm);
+    const res = await adminUpdateUser(editForm);
     setIsSaving(false);
-    setEditingId(null);
-    onRefresh(); 
+    
+    if (res && res.success !== false) {
+        setMessage({text: "تم تحديث بيانات المستخدم بنجاح", type: 'success'});
+        if (onUpdateUser) onUpdateUser(editForm); // Optimistic update
+        setEditingId(null);
+        onRefresh(); 
+    } else {
+        setMessage({text: "فشل تحديث البيانات - راجع الاتصال", type: 'error'});
+    }
+    setTimeout(() => setMessage(null), 3000);
   };
 
   const handleSaveTask = async () => {
     setIsSaving(true);
-    await adminUpdateTask(editForm);
+    const res = await adminUpdateTask(editForm);
     setIsSaving(false);
-    setEditingId(null);
-    onRefresh();
+
+    if (res && res.success !== false) {
+        setMessage({text: "تم تحديث المهمة بنجاح", type: 'success'});
+        if (onUpdateTask) onUpdateTask(editForm); // Optimistic update
+        setEditingId(null);
+        onRefresh();
+    } else {
+        setMessage({text: "فشل تحديث المهمة - راجع الاتصال", type: 'error'});
+    }
+    setTimeout(() => setMessage(null), 3000);
   };
 
   return (
@@ -57,6 +78,14 @@ export const AdminPanel = ({ users, tasks, onRefresh }: AdminPanelProps) => {
               <RefreshCw size={20} className={isSaving ? "animate-spin" : ""} />
           </button>
        </div>
+
+       {/* Message Display */}
+       {message && (
+           <div className={`mb-6 p-4 rounded-lg border ${message.type === 'success' ? 'bg-success/10 border-success/30 text-success' : 'bg-alert/10 border-alert/30 text-alert'} flex items-center justify-between animate-in fade-in slide-in-from-top-2`}>
+               <span className="font-bold text-sm">{message.text}</span>
+               <button onClick={() => setMessage(null)} className="hover:bg-black/20 p-1 rounded"><Settings size={14} /></button>
+           </div>
+       )}
 
        {/* Tabs */}
        <div className="flex gap-2 mb-6 border-b border-white/10 pb-4 overflow-x-auto">
@@ -221,7 +250,7 @@ export const AdminPanel = ({ users, tasks, onRefresh }: AdminPanelProps) => {
                                </td>
                                <td className="px-4 py-3 align-top">
                                    {isEditing ? (
-                                       <select className="bg-black border border-white/20 p-1 w-full text-white text-xs min-w-[80px]" value={editForm.status === 'active' ? 'تعمل' : editForm.status === 'paused' ? 'موقفه' : 'منتهيه'} onChange={e => setEditForm({...editForm, status: e.target.value === 'تعمل' ? 'active' : 'paused'})}> 
+                                       <select className="bg-black border border-white/20 p-1 w-full text-white text-xs min-w-[80px]" value={editForm.status === 'active' ? 'تعمل' : editForm.status === 'paused' ? 'موقفه' : 'منتهيه'} onChange={e => setEditForm({...editForm, status: e.target.value === 'تعمل' ? 'active' : e.target.value === 'موقفه' ? 'paused' : 'finished'})}> 
                                            <option value="تعمل">تعمل</option>
                                            <option value="موقفه">موقفه</option>
                                            <option value="منتهيه">منتهيه</option>

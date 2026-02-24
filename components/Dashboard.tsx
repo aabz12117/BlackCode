@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Terminal, LogOut, User, Activity, Shield, LayoutGrid, Briefcase, Wrench, Menu, X, ChevronLeft, RectangleEllipsis, Wifi, ExternalLink, Trophy, Settings, Eye, EyeOff, ShieldAlert, Map } from "lucide-react";
+import { Terminal, LogOut, User, Activity, Shield, LayoutGrid, Briefcase, Wrench, Menu, X, ChevronLeft, RectangleEllipsis, Wifi, ExternalLink, Trophy, Settings, Eye, EyeOff, ShieldAlert, Map, Binary } from "lucide-react";
 import { User as UserType, Task } from "../types";
 import { TaskCard } from "./TaskCard";
 import { Leaderboard } from "./Leaderboard";
 import { AdminPanel } from "./AdminPanel";
 import { LogsViewer } from "./LogsViewer";
-import { submitTaskSolution, getTaskWinnerCount, logUserAction } from "../utils";
+import { submitTaskSolution, logUserAction } from "../utils";
 
 interface DashboardProps {
   user: UserType;
@@ -13,6 +13,8 @@ interface DashboardProps {
   onLogout: () => void;
   allUsers?: UserType[]; 
   onRefresh?: () => void;
+  onUpdateUser?: (u: UserType) => void;
+  onUpdateTask?: (t: Task) => void;
 }
 
 type View = 'tasks' | 'profile' | 'tools' | 'leaderboard' | 'admin' | 'logs';
@@ -31,10 +33,17 @@ const TOOLS = [
     url: 'https://aabz12117.github.io/MAPS/',
     description: 'تحليل الإحداثيات الجغرافية وتوجيه الوحدات عبر الأقمار الصناعية.',
     status: 'متصل'
+  },
+  {
+    id: 'morse',
+    name: 'محلل شفرة مورس',
+    url: 'https://aabz12117.github.io/BlackCodeMorse/',
+    description: 'أداة متقدمة لفك وتشفير إشارات مورس الصوتية والنصية.',
+    status: 'متصل'
   }
 ];
 
-export const Dashboard = ({ user, tasks, onLogout, allUsers = [], onRefresh }: DashboardProps) => {
+export const Dashboard = ({ user, tasks, onLogout, allUsers = [], onRefresh, onUpdateUser, onUpdateTask }: DashboardProps) => {
   const [activeView, setActiveView] = useState<View>('tasks');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCodeRevealed, setIsCodeRevealed] = useState(false);
@@ -42,16 +51,23 @@ export const Dashboard = ({ user, tasks, onLogout, allUsers = [], onRefresh }: D
   // Local state for immediate UI feedback, though actual state comes from 'user' prop
   const [localPoints, setLocalPoints] = useState(user.points);
 
-  const activeTasks = tasks.filter(t => t.isVisible);
+  useEffect(() => {
+    setLocalPoints(user.points);
+  }, [user.points]);
 
-  // Optimize winner counting
+  const activeTasks = useMemo(() => tasks.filter(t => t.isVisible), [tasks]);
+
+  // Optimize winner counting: Iterate users once instead of tasks * users
   const winnerCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    activeTasks.forEach(t => {
-        counts[t.taskName] = getTaskWinnerCount(t.taskName, allUsers);
+    allUsers.forEach(u => {
+        if (u.status === 'paused') return;
+        u.completedTasks.forEach(taskName => {
+            counts[taskName] = (counts[taskName] || 0) + 1;
+        });
     });
     return counts;
-  }, [activeTasks, allUsers]);
+  }, [allUsers]);
 
   const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
   const closeMenu = () => setIsMobileMenuOpen(false);
@@ -217,30 +233,62 @@ export const Dashboard = ({ user, tasks, onLogout, allUsers = [], onRefresh }: D
                         <p className="text-dim text-sm">قائمة التكليفات والعمليات النشطة المتاحة لك.</p>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-6">
-                        {activeTasks.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-20 bg-white/5 border border-dashed border-white/10 rounded-2xl text-center">
-                                <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
-                                    <Briefcase className="text-dim" size={32} />
-                                </div>
-                                <h3 className="text-lg font-bold text-white mb-1">لا توجد مهام</h3>
-                                <p className="text-sm text-dim">جميع العمليات مكتملة حالياً، يرجى التحقق لاحقاً.</p>
+                    <div className="space-y-10">
+                        {/* Main Tasks */}
+                        <div>
+                            <h3 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
+                                <span className="w-2 h-8 bg-primary rounded-full"></span>
+                                المهام الأساسية
+                            </h3>
+                            <div className="grid grid-cols-1 gap-6">
+                                {activeTasks.filter(t => t.category === 'main').length === 0 ? (
+                                    <p className="text-dim text-sm italic opacity-50">لا توجد مهام أساسية نشطة حالياً.</p>
+                                ) : (
+                                    activeTasks.filter(t => t.category === 'main').map((task, idx) => {
+                                        const winners = winnerCounts[task.taskName] || 0;
+                                        const isSolved = user.completedTasks.includes(task.taskName);
+                                        return (
+                                            <TaskCard 
+                                                key={idx} 
+                                                task={task} 
+                                                onSolve={(points) => submitTask(task.taskName, points)} 
+                                                currentWinners={winners}
+                                                isAlreadySolved={isSolved}
+                                                userStatus={user.status}
+                                            />
+                                        );
+                                    })
+                                )}
                             </div>
-                        ) : (
-                            activeTasks.map((task, idx) => {
-                                const winners = winnerCounts[task.taskName] || 0;
-                                const isSolved = user.completedTasks.includes(task.taskName);
-                                return (
-                                    <TaskCard 
-                                        key={idx} 
-                                        task={task} 
-                                        onSolve={(points) => submitTask(task.taskName, points)} 
-                                        currentWinners={winners}
-                                        isAlreadySolved={isSolved}
-                                    />
-                                );
-                            })
-                        )}
+                        </div>
+
+                        {/* Side Tasks */}
+                        <div>
+                            <h3 className="text-xl font-bold text-dim mb-4 flex items-center gap-2">
+                                <span className="w-2 h-8 bg-dim/50 rounded-full"></span>
+                                المهام الجانبية
+                            </h3>
+                            <div className="grid grid-cols-1 gap-6">
+                                {activeTasks.filter(t => t.category !== 'main').length === 0 ? (
+                                    <p className="text-dim text-sm italic opacity-50">لا توجد مهام جانبية نشطة حالياً.</p>
+                                ) : (
+                                    activeTasks.filter(t => t.category !== 'main').map((task, idx) => {
+                                        const winners = winnerCounts[task.taskName] || 0;
+                                        const isSolved = user.completedTasks.includes(task.taskName);
+                                        return (
+                                            <TaskCard 
+                                                key={idx} 
+                                                task={task} 
+                                                onSolve={(points) => submitTask(task.taskName, points)} 
+                                                currentWinners={winners}
+                                                isAlreadySolved={isSolved}
+                                                userStatus={user.status}
+                                            />
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
@@ -252,7 +300,13 @@ export const Dashboard = ({ user, tasks, onLogout, allUsers = [], onRefresh }: D
 
             {/* ADMIN VIEW */}
             {activeView === 'admin' && user.isAdmin && (
-                <AdminPanel users={allUsers} tasks={tasks} onRefresh={() => onRefresh && onRefresh()} />
+                <AdminPanel 
+                    users={allUsers} 
+                    tasks={tasks} 
+                    onRefresh={() => onRefresh && onRefresh()} 
+                    onUpdateUser={onUpdateUser}
+                    onUpdateTask={onUpdateTask}
+                />
             )}
 
              {/* LOGS VIEW */}
@@ -292,10 +346,18 @@ export const Dashboard = ({ user, tasks, onLogout, allUsers = [], onRefresh }: D
                                     </div>
                                 </div>
                                 <div className="flex gap-3">
-                                    <div className="px-4 py-2 bg-success/10 border border-success/20 rounded-lg flex items-center gap-2">
-                                        <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
-                                        <span className="text-xs font-bold text-success">حساب نشط</span>
-                                    </div>
+                                    {user.status === 'active' && (
+                                        <div className="px-4 py-2 bg-success/10 border border-success/20 rounded-lg flex items-center gap-2">
+                                            <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
+                                            <span className="text-xs font-bold text-success">حساب نشط</span>
+                                        </div>
+                                    )}
+                                    {user.status === 'paused' && (
+                                        <div className="px-4 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-center gap-2">
+                                            <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                                            <span className="text-xs font-bold text-yellow-500">حساب موقف</span>
+                                        </div>
+                                    )}
                                     <div className="px-4 py-2 bg-primary/10 border border-primary/20 rounded-lg flex items-center gap-2">
                                         <Shield size={14} className="text-primary" />
                                         <span className="text-xs font-bold text-primary">تصريح أمني</span>
@@ -363,6 +425,7 @@ export const Dashboard = ({ user, tasks, onLogout, allUsers = [], onRefresh }: D
                                             {/* Icon Logic */}
                                             {tool.id === 'pager' ? <RectangleEllipsis size={24} /> : 
                                              tool.id === 'maps' ? <Map size={24} /> : 
+                                             tool.id === 'morse' ? <Binary size={24} /> :
                                              <Wrench size={24} />}
                                         </div>
                                         <div className="flex items-center gap-1.5 px-2.5 py-1 bg-success/10 border border-success/10 rounded-full">
