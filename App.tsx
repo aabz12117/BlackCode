@@ -71,29 +71,41 @@ const App = () => {
 
   useEffect(() => {
     const initSystem = async () => {
-      // 1. Fetch Users
-      setBootStatus("DECRYPTING PERSONNEL DATA...");
-      const rawUsers = await fetchGoogleSheet(SHEET_IDS.USERS);
-      const parsedUsers: User[] = rawUsers
-        .map(parseUser)
-        .filter((u): u is User => u !== null);
+      try {
+        // 1. Fetch Users
+        setBootStatus("DECRYPTING PERSONNEL DATA...");
+        const rawUsers = await fetchGoogleSheet(SHEET_IDS.USERS);
+        const parsedUsers: User[] = rawUsers
+          .map(parseUser)
+          .filter((u): u is User => u !== null);
 
-      setUsers(parsedUsers);
-      prevUsersRef.current = parsedUsers;
+        setUsers(parsedUsers);
+        prevUsersRef.current = parsedUsers;
 
-      // 2. Fetch Tasks
-      setBootStatus("DOWNLOADING MISSION PARAMETERS...");
-      const rawTasks = await fetchGoogleSheet(SHEET_IDS.TASKS);
-      const parsedTasks: Task[] = rawTasks.map(parseTask);
+        // 2. Fetch Tasks
+        setBootStatus("DOWNLOADING MISSION PARAMETERS...");
+        const rawTasks = await fetchGoogleSheet(SHEET_IDS.TASKS);
+        const parsedTasks: Task[] = rawTasks.map(parseTask);
 
-      setTasks(parsedTasks);
-      prevTasksRef.current = parsedTasks;
+        setTasks(parsedTasks);
+        prevTasksRef.current = parsedTasks;
 
-      setBootStatus("SYSTEM ONLINE.");
-      setTimeout(() => setLoading(false), 500);
+        setBootStatus("SYSTEM ONLINE.");
+        setTimeout(() => setLoading(false), 500);
+      } catch (error) {
+        console.error("initSystem failed:", error);
+        setBootStatus("CONNECTION ERROR — RETRYING...");
+        setTimeout(() => setLoading(false), 1500);
+      }
     };
 
-    initSystem();
+    // Safety timeout: if initSystem hangs for 15s, force-show the app
+    const safetyTimer = setTimeout(() => {
+      setBootStatus("TIMEOUT — PROCEEDING OFFLINE...");
+      setLoading(false);
+    }, 15000);
+
+    initSystem().finally(() => clearTimeout(safetyTimer));
   }, []);
 
   // Polling Effect
