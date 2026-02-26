@@ -7,7 +7,7 @@ export const BootScreen = ({ status }: { status: string }) => (
     <div className="w-72 relative z-10 text-right" dir="rtl">
       <div className="flex justify-between mb-2 text-[10px] uppercase tracking-widest text-tech/70 font-bold font-sans">
         <span>بدء النظام</span>
-        <span className="font-mono">v5.0.0-AR</span>
+        <span className="font-mono">v5.1.0-FIX</span>
       </div>
 
       <div className="w-full bg-deep h-1 mb-8 overflow-hidden border border-primary/30 rounded-sm">
