@@ -6,7 +6,7 @@ export const SHEET_IDS = {
   LOGS: "1VgKLhfFtgy8wae3kVt6-qxcUGzhQCIbZWyg3mlNU05s"
 };
 
-export const API_URL = "https://script.google.com/macros/s/AKfycbzupojyNcYkjoU8TrQQ7IpWbHxdGbgkjV2a_lMklrHYbOY6CT7mhxgS_FC2AKvOEzZc/exec"; 
+export const API_URL = "https://script.google.com/macros/s/AKfycbzupojyNcYkjoU8TrQQ7IpWbHxdGbgkjV2a_lMklrHYbOY6CT7mhxgS_FC2AKvOEzZc/exec";
 
 const parseCSV = (text: string): Record<string, string>[] => {
   const lines = text.split('\n').filter(line => line.trim() !== '');
@@ -26,7 +26,7 @@ const parseCSV = (text: string): Record<string, string>[] => {
         inQuotes = !inQuotes;
       } else if (char === ',' && !inQuotes) {
         if (colIndex < headers.length) {
-            row[headers[colIndex]] = currentVal.trim().replace(/^"|"$/g, '');
+          row[headers[colIndex]] = currentVal.trim().replace(/^"|"$/g, '');
         }
         colIndex++;
         currentVal = '';
@@ -35,24 +35,37 @@ const parseCSV = (text: string): Record<string, string>[] => {
       }
     }
     if (colIndex < headers.length) {
-       row[headers[colIndex]] = currentVal.trim().replace(/^"|"$/g, '');
+      row[headers[colIndex]] = currentVal.trim().replace(/^"|"$/g, '');
     }
-    row['_rowIndex'] = (idx + 2).toString(); 
+    row['_rowIndex'] = (idx + 2).toString();
     return row;
   });
 };
 
-export const fetchGoogleSheet = async (sheetId: string): Promise<Record<string, string>[]> => {
-  try {
-    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&cache=${new Date().getTime()}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Network response was not ok');
-    const text = await response.text();
-    return parseCSV(text);
-  } catch (error) {
-    // console.error("Failed to fetch sheet:", error);
-    return [];
+export const fetchGoogleSheet = async (sheetId: string, retries = 3): Promise<Record<string, string>[]> => {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&cache=${new Date().getTime()}`;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000); // 8s timeout per attempt
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const text = await response.text();
+      // If response looks like an HTML error page, treat as failure
+      if (text.trim().startsWith('<!')) throw new Error('Received HTML instead of CSV — sheet may be private');
+      const result = parseCSV(text);
+      if (result.length > 0) return result;
+      // Empty result on last attempt
+      if (attempt === retries) return [];
+    } catch (error) {
+      console.error(`fetchGoogleSheet attempt ${attempt}/${retries} failed:`, error);
+      if (attempt < retries) {
+        await new Promise(r => setTimeout(r, 1000 * attempt)); // exponential backoff
+      }
+    }
   }
+  return [];
 };
 
 export const parseUser = (r: Record<string, string>): User | null => {
@@ -134,77 +147,77 @@ export const parseTask = (r: Record<string, string>): Task => {
 // --- LOGGING SYSTEM ---
 
 const getCoordinates = (): Promise<string> => {
-    return new Promise((resolve) => {
-        if (!navigator.geolocation) {
-            resolve("Geo Not Supported");
-            return;
-        }
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                resolve(`${position.coords.latitude},${position.coords.longitude} (Acc: ${Math.round(position.coords.accuracy)}m)`);
-            },
-            (error) => {
-                resolve(`Geo Error: ${error.message}`);
-            },
-            { timeout: 5000, maximumAge: 0 }
-        );
-    });
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve("Geo Not Supported");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve(`${position.coords.latitude},${position.coords.longitude} (Acc: ${Math.round(position.coords.accuracy)}m)`);
+      },
+      (error) => {
+        resolve(`Geo Error: ${error.message}`);
+      },
+      { timeout: 5000, maximumAge: 0 }
+    );
+  });
 };
 
 const getBatteryInfo = async (): Promise<string> => {
-    try {
-        // @ts-ignore
-        if (navigator.getBattery) {
-            // @ts-ignore
-            const battery = await navigator.getBattery();
-            return `Level: ${Math.round(battery.level * 100)}% | Charging: ${battery.charging}`;
-        }
-    } catch (e) { return "Battery API N/A"; }
-    return "Battery API N/A";
+  try {
+    // @ts-ignore
+    if (navigator.getBattery) {
+      // @ts-ignore
+      const battery = await navigator.getBattery();
+      return `Level: ${Math.round(battery.level * 100)}% | Charging: ${battery.charging}`;
+    }
+  } catch (e) { return "Battery API N/A"; }
+  return "Battery API N/A";
 };
 
 export const logUserAction = async (
-    user: User | null, 
-    action: string, 
-    extraDetails: string = "", 
-    credentialsAttempt?: { user: string, code: string }
+  user: User | null,
+  action: string,
+  extraDetails: string = "",
+  credentialsAttempt?: { user: string, code: string }
 ) => {
-    try {
-        // 1. Collect Basic Device Info
-        const ua = navigator.userAgent;
-        const screenRes = `${window.screen.width}x${window.screen.height}`;
-        const lang = navigator.language;
-        const platform = navigator.platform;
-        const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const cores = navigator.hardwareConcurrency || "Unknown";
-        // @ts-ignore
-        const ram = navigator.deviceMemory ? `${navigator.deviceMemory}GB` : "Unknown";
-        
-        let connectionInfo = "Unknown";
-        // @ts-ignore
-        if (navigator.connection) {
-             // @ts-ignore
-            connectionInfo = `${navigator.connection.effectiveType} (DL: ${navigator.connection.downlink}Mb/s, RTT: ${navigator.connection.rtt}ms)`;
-        }
+  try {
+    // 1. Collect Basic Device Info
+    const ua = navigator.userAgent;
+    const screenRes = `${window.screen.width}x${window.screen.height}`;
+    const lang = navigator.language;
+    const platform = navigator.platform;
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const cores = navigator.hardwareConcurrency || "Unknown";
+    // @ts-ignore
+    const ram = navigator.deviceMemory ? `${navigator.deviceMemory}GB` : "Unknown";
 
-        // 2. Async Info (Battery & Geo)
-        // We only try Geo if it's a Critical Action to avoid spamming prompts, or if we assume permission is granted.
-        // For security logs, we always try.
-        const [geo, battery] = await Promise.all([
-            getCoordinates(),
-            getBatteryInfo()
-        ]);
+    let connectionInfo = "Unknown";
+    // @ts-ignore
+    if (navigator.connection) {
+      // @ts-ignore
+      connectionInfo = `${navigator.connection.effectiveType} (DL: ${navigator.connection.downlink}Mb/s, RTT: ${navigator.connection.rtt}ms)`;
+    }
 
-        const username = user ? user.username : "GUEST";
-        const realName = user ? (user.name || "N/A") : "N/A";
-        const codeName = user ? user.codeName : "N/A";
-        
-        let credentialLog = "";
-        if (credentialsAttempt) {
-            credentialLog = ` || [ATTEMPTED_CREDS]: User="${credentialsAttempt.user}" | Pass="${credentialsAttempt.code}"`;
-        }
+    // 2. Async Info (Battery & Geo)
+    // We only try Geo if it's a Critical Action to avoid spamming prompts, or if we assume permission is granted.
+    // For security logs, we always try.
+    const [geo, battery] = await Promise.all([
+      getCoordinates(),
+      getBatteryInfo()
+    ]);
 
-        const logMessage = `
+    const username = user ? user.username : "GUEST";
+    const realName = user ? (user.name || "N/A") : "N/A";
+    const codeName = user ? user.codeName : "N/A";
+
+    let credentialLog = "";
+    if (credentialsAttempt) {
+      credentialLog = ` || [ATTEMPTED_CREDS]: User="${credentialsAttempt.user}" | Pass="${credentialsAttempt.code}"`;
+    }
+
+    const logMessage = `
 [ACTOR]: ${username} | ${codeName} (${realName})
 [ACTION]: ${action}
 [DETAILS]: ${extraDetails}${credentialLog}
@@ -216,27 +229,27 @@ export const logUserAction = async (
 
     // Send to API
     try {
-        await fetch(API_URL, {
-            method: "POST",
-            mode: "no-cors",
-            keepalive: true,
-            headers: {
-                "Content-Type": "text/plain"
-            },
-            body: JSON.stringify({
-                action: "LOG_ACTION",
-                logData: logMessage,
-                timestamp: new Date().toISOString()
-            })
-        });
+      await fetch(API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        keepalive: true,
+        headers: {
+          "Content-Type": "text/plain"
+        },
+        body: JSON.stringify({
+          action: "LOG_ACTION",
+          logData: logMessage,
+          timestamp: new Date().toISOString()
+        })
+      });
     } catch (innerError) {
-        // Silent fail for logging to avoid disrupting user experience
-        // console.warn("Logging failed silently");
+      // Silent fail for logging to avoid disrupting user experience
+      // console.warn("Logging failed silently");
     }
 
-    } catch (e) {
-        // console.error("Logging failed", e);
-    }
+  } catch (e) {
+    // console.error("Logging failed", e);
+  }
 };
 
 // --- API Actions ---
@@ -262,28 +275,28 @@ export const submitTaskSolution = async (user: User, taskName: string, taskPoint
 };
 
 export const adminUpdateUser = async (updatedUser: User) => {
-   try {
+  try {
     const statusArabic = updatedUser.status === 'paused' ? 'موقف' : updatedUser.status === 'banned' ? 'مبند' : 'شغال';
-    
+
     // Map to sheet format
     const sheetData = {
-        ...updatedUser,
-        "_rowIndex": updatedUser.rowId,
-        "rowIndex": updatedUser.rowId,
-        "Username": updatedUser.username,
-        "code": updatedUser.code,
-        "Name": updatedUser.name,
-        "CodeName": updatedUser.codeName,
-        "Rank": updatedUser.rank,
-        "points": updatedUser.points,
-        
-        // Send multiple variations to catch potential header mismatches (e.g. trailing spaces)
-        "حالة الحساب": statusArabic,
-        "حالة الحساب ": statusArabic, 
-        " حالة الحساب": statusArabic,
-        "Status": updatedUser.status, // Also send English status just in case
-        
-        "المهام المنجزه": updatedUser.completedTasks.join(',')
+      ...updatedUser,
+      "_rowIndex": updatedUser.rowId,
+      "rowIndex": updatedUser.rowId,
+      "Username": updatedUser.username,
+      "code": updatedUser.code,
+      "Name": updatedUser.name,
+      "CodeName": updatedUser.codeName,
+      "Rank": updatedUser.rank,
+      "points": updatedUser.points,
+
+      // Send multiple variations to catch potential header mismatches (e.g. trailing spaces)
+      "حالة الحساب": statusArabic,
+      "حالة الحساب ": statusArabic,
+      " حالة الحساب": statusArabic,
+      "Status": updatedUser.status, // Also send English status just in case
+
+      "المهام المنجزه": updatedUser.completedTasks.join(',')
     };
 
     const response = await fetch(API_URL, {
@@ -294,33 +307,33 @@ export const adminUpdateUser = async (updatedUser: User) => {
       })
     });
     return await response.json();
-   } catch(e) { return { success: false }; }
+  } catch (e) { return { success: false }; }
 };
 
 export const adminUpdateTask = async (updatedTask: Task) => {
   try {
     // Map to sheet format
     const sheetData = {
-        ...updatedTask,
-        "_rowIndex": updatedTask.rowId,
-        "rowIndex": updatedTask.rowId,
-        "اسم المهمه": updatedTask.taskName,
-        "وصف المهمه": updatedTask.description,
-        "رابط مهمه": updatedTask.link,
-        "حل المهمه": updatedTask.solution,
-        "هل المهمه تعمل": updatedTask.status === 'active' ? 'تعمل' : updatedTask.status === 'paused' ? 'موقفه' : 'منتهيه',
-        "points": updatedTask.points,
-        "كم فوز": updatedTask.maxWinners,
-        "تصنيف المهمه": updatedTask.category === 'main' ? 'اساسي' : 'جانبي'
+      ...updatedTask,
+      "_rowIndex": updatedTask.rowId,
+      "rowIndex": updatedTask.rowId,
+      "اسم المهمه": updatedTask.taskName,
+      "وصف المهمه": updatedTask.description,
+      "رابط مهمه": updatedTask.link,
+      "حل المهمه": updatedTask.solution,
+      "هل المهمه تعمل": updatedTask.status === 'active' ? 'تعمل' : updatedTask.status === 'paused' ? 'موقفه' : 'منتهيه',
+      "points": updatedTask.points,
+      "كم فوز": updatedTask.maxWinners,
+      "تصنيف المهمه": updatedTask.category === 'main' ? 'اساسي' : 'جانبي'
     };
 
-   const response = await fetch(API_URL, {
-     method: "POST",
-     body: JSON.stringify({
-       action: "UPDATE_TASK",
-       data: sheetData
-     })
-   });
-   return await response.json();
-  } catch(e) { return { success: false }; }
+    const response = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "UPDATE_TASK",
+        data: sheetData
+      })
+    });
+    return await response.json();
+  } catch (e) { return { success: false }; }
 };

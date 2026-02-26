@@ -14,6 +14,8 @@ const App = () => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [bootStatus, setBootStatus] = useState("INITIATING HANDSHAKE...");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [connectionError, setConnectionError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   // Refs for tracking changes
   const isFetchingRef = useRef(false);
@@ -70,6 +72,8 @@ const App = () => {
   }, [currentUser]);
 
   useEffect(() => {
+    setLoading(true);
+    setConnectionError(false);
     const initSystem = async () => {
       try {
         // 1. Fetch Users
@@ -90,11 +94,17 @@ const App = () => {
         setTasks(parsedTasks);
         prevTasksRef.current = parsedTasks;
 
-        setBootStatus("SYSTEM ONLINE.");
+        if (parsedUsers.length === 0) {
+          console.error("No users loaded — Google Sheet may be private or unreachable");
+          setConnectionError(true);
+        }
+
+        setBootStatus(parsedUsers.length > 0 ? "SYSTEM ONLINE." : "CONNECTION FAILED — SHEET UNREACHABLE");
         setTimeout(() => setLoading(false), 500);
       } catch (error) {
         console.error("initSystem failed:", error);
         setBootStatus("CONNECTION ERROR — RETRYING...");
+        setConnectionError(true);
         setTimeout(() => setLoading(false), 1500);
       }
     };
@@ -106,7 +116,7 @@ const App = () => {
     }, 15000);
 
     initSystem().finally(() => clearTimeout(safetyTimer));
-  }, []);
+  }, [retryCount]);
 
   // Polling Effect
   useEffect(() => {
@@ -183,6 +193,24 @@ const App = () => {
 
   if (loading) {
     return <BootScreen status={bootStatus} />;
+  }
+
+  if (connectionError && users.length === 0) {
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 font-mono" dir="rtl">
+        <div className="w-16 h-16 border-4 border-red-500/30 border-t-red-500 rounded-full animate-spin mb-6"></div>
+        <h2 className="text-xl font-bold text-red-500 mb-3">⚠ فشل الاتصال بقاعدة البيانات</h2>
+        <p className="text-gray-400 text-sm text-center mb-6 max-w-sm">
+          تعذّر الوصول إلى Google Sheets. تأكد أن الجداول مشاركة للعموم (Anyone with the link → Viewer).
+        </p>
+        <button
+          onClick={() => setRetryCount(c => c + 1)}
+          className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold text-sm transition-colors"
+        >
+          إعادة المحاولة
+        </button>
+      </div>
+    );
   }
 
   if (isLoggingOut) {
